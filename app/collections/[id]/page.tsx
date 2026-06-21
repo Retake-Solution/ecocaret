@@ -19,8 +19,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   return {
-    title: `${product.title} | Eco Caret - Ethical Brilliance`,
-    description: product.description,
+    title: `${product.metaTitle || product.name || product.title || "Product"} | Eco Caret - Ethical Brilliance`,
+    description: product.metaDescription || product.description || product.shortDescription,
   };
 }
 
@@ -38,6 +38,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   return (
     <ProductDetailsClient
+      key={product._id}
       product={product}
       suggestedProducts={suggestedProducts}
     />

@@ -12,6 +12,73 @@ import { toggleWishlist } from "@/lib/features/wishlist/wishlistSlice";
 import { fetchProducts } from "@/services/api";
 import { ApiProduct } from "@/types";
 
+const formatLabel = (value?: string) =>
+  value
+    ? value
+        .replace(/[_-]/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+    : "";
+
+const getProductName = (product: ApiProduct) =>
+  product.name || product.title || "Untitled Masterpiece";
+
+const getProductImage = (product: ApiProduct) => {
+  if (product.images?.[0]) return product.images[0];
+
+  const firstColorImage = product.colorImages?.[0];
+  return firstColorImage?.url || firstColorImage?.imageUrl || firstColorImage?.src || "";
+};
+
+const getProductPrice = (product: ApiProduct) => {
+  if (typeof product.displayPrice === "number") return product.displayPrice;
+
+  const activeMetalOption = product.metalOptions?.find((option) => option.isActive);
+  const metalWeight =
+    product.sizeMatrix
+      ?.find((size) => size.isAvailable)
+      ?.weightByPurity.find((weight) => weight.purity === activeMetalOption?.purity)
+      ?.metalWeightGrams || 0;
+  const metalTotal = (activeMetalOption?.pricePerGram || 0) * metalWeight;
+  const stoneTotal =
+    product.productStones?.reduce(
+      (sum, item) =>
+        sum + (item.stone?.priceUSD || 0) * (item.caratWeight || item.stone?.caratWeight || 0),
+      0
+    ) || 0;
+  const subtotal = stoneTotal + metalTotal + (product.makingChargeUSD || 0);
+  const discount = product.discountPercent ? subtotal * (product.discountPercent / 100) : 0;
+
+  return Math.max(subtotal - discount, 0);
+};
+
+const getMetalSummary = (product: ApiProduct) => {
+  const options = product.metalOptions?.filter((option) => option.isActive) || [];
+  if (options.length > 0) {
+    const colors = Array.from(
+      new Set(options.map((option) => formatLabel(option.metalColor)))
+    );
+    const purities = Array.from(new Set(options.map((option) => option.purity)));
+    return `${colors.slice(0, 3).join(", ")} Gold${
+      purities.length ? ` · ${purities.join("/")}` : ""
+    }`;
+  }
+
+  return "";
+};
+
+const getProductSpec = (product: ApiProduct) => {
+  const caratWeight = product.totalStoneCaratWeight || 0;
+  const shape = formatLabel(product.shape);
+  const type = formatLabel(product.subCategory || product.category);
+
+  return [caratWeight ? `${caratWeight.toFixed(2)}ct` : "", shape, type]
+    .filter(Boolean)
+    .join(" · ");
+};
+
+const getAvailableSizeCount = (product: ApiProduct) =>
+  product.sizeMatrix?.filter((size) => size.isAvailable).length || 0;
+
 export default function Collections() {
   const dispatch = useAppDispatch();
   const cartOpen = useAppSelector((state) => state.cart.isOpen);
@@ -37,13 +104,13 @@ export default function Collections() {
   }, []);
 
   const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadProducts = async () => {
       const fetchedProducts = await fetchProducts();
-      if (fetchedProducts.length > 0) {
-        setProducts(fetchedProducts);
-      }
+      setProducts(fetchedProducts);
+      setIsLoading(false);
     };
     loadProducts();
   }, []);
@@ -76,7 +143,16 @@ export default function Collections() {
             </div>
           </header>
 
-          {sortedProducts.length === 0 ? (
+          {isLoading ? (
+            <div className="h-[400px] flex flex-col items-center justify-center text-center space-y-4">
+              <span className="material-symbols-outlined text-outline-variant text-6xl animate-pulse">
+                diamond
+              </span>
+              <p className="font-headline-sm text-headline-sm text-on-surface">
+                Loading Masterpieces
+              </p>
+            </div>
+          ) : sortedProducts.length === 0 ? (
             <div className="h-[400px] flex flex-col items-center justify-center text-center space-y-4">
               <span className="material-symbols-outlined text-outline-variant text-6xl">
                 diamond
@@ -91,71 +167,95 @@ export default function Collections() {
               id="product-grid"
             >
               {sortedProducts.map((product, index) => {
-                const diamondAmount = product.specifications?.[0]?.diamondAmount || 0;
-                const metalWeight = product.sizes?.[0]?.metalWeight || 0;
-                const ratePerGram = product.metal?.[0]?.ratePerGram || 0;
-                const price = diamondAmount + (metalWeight * ratePerGram);
+                const productName = getProductName(product);
+                const productImage = getProductImage(product);
+                const price = getProductPrice(product);
+                const spec = getProductSpec(product);
+                const metalSummary = getMetalSummary(product);
+                const availableSizeCount = getAvailableSizeCount(product);
 
                 return (
-                <div
-                  key={product._id}
-                  style={{ animationDelay: `${index * 80}ms` }}
-                  className="grid-item ripple-fade product-card group relative overflow-hidden bg-surface-container-lowest rounded-xl shadow-sm flex flex-col justify-between cursor-pointer"
-                >
+                  <div
+                    key={product._id}
+                    style={{ animationDelay: `${index * 80}ms` }}
+                    className="grid-item ripple-fade product-card group relative overflow-hidden bg-surface-container-lowest rounded-xl shadow-sm flex flex-col justify-between cursor-pointer"
+                  >
                   <Link href={`/collections/${product._id}`} className="flex flex-col justify-between flex-grow h-full">
                     <div className="aspect-[0.75] overflow-hidden relative bg-surface-container">
-                      <img
-                        alt={product.title}
-                        className="parallax-img w-full h-full object-cover"
-                        src={product.images?.[0] || ''}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-surface/90 via-surface/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          dispatch(toggleWishlist(product._id));
-                        }}
-                        className="absolute top-4 right-4 text-primary opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-[-10px] group-hover:translate-y-0 cursor-pointer z-10"
-                      >
-                        <span className={`material-symbols-outlined ${isInWishlist(product._id) ? "fill-[1]" : ""}`}>
-                          favorite
+                      {productImage ? (
+                        <img
+                          alt={productName}
+                          className="parallax-img w-full h-full object-cover"
+                          src={productImage}
+                        />
+                      ) : (
+                        <div className="parallax-img w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-surface-container-lowest via-surface-container-low to-secondary-container/30 text-primary">
+                          <span className="material-symbols-outlined text-6xl mb-3">
+                            diamond
+                          </span>
+                          <span className="font-label-sm text-label-sm uppercase tracking-widest">
+                            Image Coming Soon
+                          </span>
+                        </div>
+                      )}
+                      {product.isNewArrival && (
+                        <span className="absolute top-4 left-4 bg-secondary text-on-secondary rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest">
+                          New
                         </span>
-                      </button>
-                    </div>
-                    <div className="p-4 md:p-6 relative flex-grow flex flex-col justify-between">
-                      <div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-surface/90 via-surface/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            dispatch(toggleWishlist(product._id));
+                          }}
+                          className="absolute top-4 right-4 text-primary opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-[-10px] group-hover:translate-y-0 cursor-pointer z-10"
+                        >
+                          <span className={`material-symbols-outlined ${isInWishlist(product._id) ? "fill-[1]" : ""}`}>
+                            favorite
+                          </span>
+                        </button>
+                      </div>
+                      <div className="p-4 md:p-6 relative flex-grow flex flex-col justify-between">
+                        <div>
                         <h4 className="font-headline-md text-label-md md:text-headline-md text-on-surface mb-1 group-hover:text-primary transition-colors duration-300 line-clamp-2 md:line-clamp-none">
-                          {product.title}
+                          {productName}
                         </h4>
                         <p className="text-on-surface-variant text-[11px] md:font-body-md mb-2 md:mb-4 opacity-80">
-                          {product.stoneType || ''} - {product.metal?.[0]?.color || ''}
+                          {formatLabel(product.stoneType)}
+                          {metalSummary ? ` · ${metalSummary}` : ""}
                         </p>
-                      </div>
-                      <p className="text-primary font-bold text-label-md md:text-body-lg">
-                        ${price.toLocaleString()}
-                      </p>
-
-                      {/* Hover Details overlay */}
-                      <div className="absolute inset-x-0 bottom-0 p-4 md:p-6 bg-primary text-on-primary translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out flex justify-between items-center">
-                        <div className="hidden md:block">
-                          <p className="text-[10px] uppercase tracking-tighter opacity-80 font-bold">
-                            Specification
-                          </p>
-                          <p className="font-bold text-sm">
-                            {(product.specifications?.[0]?.diamondWeight || 0).toFixed(2)}ct • {product.jewelryType || 'Jewelry'}
-                          </p>
                         </div>
-                        <span className="font-label-sm uppercase tracking-widest flex items-center gap-1 md:gap-2 group/btn font-bold text-[10px] md:text-xs">
-                          Shop
-                          <span className="material-symbols-outlined text-[14px] md:text-sm group-hover/btn:translate-x-1 transition-transform">
-                            arrow_forward
+                        <p className="text-primary font-bold text-label-md md:text-body-lg">
+                          ${price.toLocaleString()}
+                        </p>
+
+                        {/* Hover Details overlay */}
+                        <div className="absolute inset-x-0 bottom-0 p-4 md:p-6 bg-primary text-on-primary translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out flex justify-between items-center">
+                          <div className="hidden md:block">
+                            <p className="text-[10px] uppercase tracking-tighter opacity-80 font-bold">
+                              Specification
+                            </p>
+                          <p className="font-bold text-sm">
+                              {spec || "Made-to-order jewelry"}
+                          </p>
+                          {availableSizeCount > 0 && (
+                            <p className="text-xs opacity-80 mt-1">
+                              {availableSizeCount} sizes available
+                            </p>
+                          )}
+                        </div>
+                          <span className="font-label-sm uppercase tracking-widest flex items-center gap-1 md:gap-2 group/btn font-bold text-[10px] md:text-xs">
+                            Shop
+                            <span className="material-symbols-outlined text-[14px] md:text-sm group-hover/btn:translate-x-1 transition-transform">
+                              arrow_forward
+                            </span>
                           </span>
-                        </span>
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                </div>
+                    </Link>
+                  </div>
                 );
               })}
             </div>

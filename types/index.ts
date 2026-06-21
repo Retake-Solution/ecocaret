@@ -1,40 +1,96 @@
 export interface ApiProduct {
+  ratings?: {
+    average: number;
+    count: number;
+  };
   _id: string;
   sku: string;
+  name?: string;
   slug: string;
-  title: string;
+  title?: string;
   description: string;
-  sourceUrl: string;
-  categoryId: string;
-  collectionIds: string[];
+  shortDescription?: string;
+  sourceUrl?: string;
+  categoryId?: string;
+  category?: string;
+  subCategory?: string;
+  collectionIds?: string[];
+  collection?: string[];
   gender: string;
+  shape?: string;
+  occasion?: string[];
+  tags?: string[];
   stoneType: string;
-  images: string[];
-  videos: string[];
-  metal: {
-    _id: string;
-    name: string;
+  totalStoneCaratWeight?: number;
+  displayPrice?: number;
+  discountPercent?: number;
+  makingChargeUSD?: number;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  isMadeToOrder?: boolean;
+  isNewArrival?: boolean;
+  isReadyToShip?: boolean;
+  allowEngraving?: boolean;
+  engravingMaxChars?: number;
+  estimatedDeliveryDays?: number;
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+  images?: string[];
+  colorImages?: Array<{
+    url?: string;
+    imageUrl?: string;
+    src?: string;
+    metalColor?: string;
+    color?: string;
+    alt?: string;
+  }>;
+  videos?: string[];
+  metalOptions?: {
+    _id?: string;
+    metalType: string;
+    metalColor: string;
     purity: string;
-    color: string;
-    group: string;
-    ratePerGram: number;
+    pricePerGram: number;
+    purityMultiplier: number;
     isActive: boolean;
   }[];
-  specifications: {
-    diamondShape: string;
-    diamondPieces: number;
-    diamondWeight: number;
-    diamondQuality: string;
-    settingType: string;
-    _id: string;
-    diamondAmount: number;
+  productStones?: {
+    stone: {
+      _id: string;
+      name: string;
+      slug?: string;
+      stoneType: string;
+      caratWeight: number;
+      clarity: string;
+      cut: string;
+      color: string;
+      shape: string;
+      settingType: string;
+      priceUSD: number;
+      isActive: boolean;
+    };
+    stoneRole: string;
+    caratWeight: number;
+    displayOrder: number;
   }[];
-  sizes: {
+  sizeMatrix?: {
     size: string;
-    metalWeight: number;
-    _id: string;
+    sizeLabel: string;
+    isAvailable: boolean;
+    weightByPurity: {
+      purity: string;
+      metalWeightGrams: number;
+      productWeightGrams: number;
+    }[];
+    inventory: {
+      metalType: string;
+      metalColor: string;
+      purity: string;
+      stock: number;
+      sku: string;
+    }[];
   }[];
-  jewelryType: string;
-  status: string;
-  isDeleted: boolean;
 }
