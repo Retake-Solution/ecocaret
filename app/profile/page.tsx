@@ -9,7 +9,6 @@ import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { setCartOpen, removeFromCart, clearCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen, logoutUser } from "@/lib/features/profile/profileSlice";
 import { toggleWishlist } from "@/lib/features/wishlist/wishlistSlice";
-import { INITIAL_PRODUCTS } from "@/app/collections/data";
 
 export default function ProfilePage() {
   const dispatch = useAppDispatch();
@@ -82,11 +81,6 @@ export default function ProfilePage() {
     alert("Successfully logged out of the Conscious Circle.");
     window.location.href = "/";
   };
-
-  // Filter products for wishlist tab
-  const wishlistedProducts = INITIAL_PRODUCTS.filter((product) =>
-    wishlistItems.includes(product.id)
-  );
 
   // Mock orders
   const mockOrders = [
@@ -478,7 +472,7 @@ export default function ProfilePage() {
                 {activeTab === "wishlist" && (
                   <section className="space-y-6">
                     <h2 className="font-headline-sm text-headline-sm text-primary mb-6">Your Curated Wishlist</h2>
-                    {wishlistedProducts.length === 0 ? (
+                    {wishlistItems.length === 0 ? (
                       <div className="text-center py-16 space-y-6">
                         <div className="w-16 h-16 rounded-full bg-secondary-fixed/30 flex items-center justify-center mx-auto">
                           <span className="material-symbols-outlined text-secondary text-3xl">favorite_border</span>
@@ -498,43 +492,44 @@ export default function ProfilePage() {
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        {wishlistedProducts.map((product) => (
+                        {wishlistItems.map((productId) => (
                           <div
-                            key={product.id}
+                            key={productId}
                             className="bg-surface-container-low rounded-2xl overflow-hidden group border border-outline-variant/10 shadow-sm relative flex flex-col justify-between"
                           >
                             <button
-                              onClick={() => dispatch(toggleWishlist(product.id))}
+                              onClick={() => dispatch(toggleWishlist(productId))}
                               className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center text-secondary hover:text-primary transition-all duration-300 cursor-pointer shadow-sm active:scale-90"
                             >
                               <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
                                 favorite
                               </span>
                             </button>
-                            <Link href={`/collections/${product.id}`} className="flex-grow flex flex-col justify-between">
+                            <Link href={`/collections/${productId}`} className="flex-grow flex flex-col justify-between">
                               <div>
-                                <div className="h-48 overflow-hidden bg-surface-container">
-                                  <img
-                                    src={product.image}
-                                    alt={product.name}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                  />
+                                <div className="h-48 overflow-hidden bg-gradient-to-br from-surface-container-lowest via-surface-container-low to-secondary-container/30 text-primary flex flex-col items-center justify-center">
+                                  <span className="material-symbols-outlined text-5xl mb-3">
+                                    diamond
+                                  </span>
+                                  <span className="font-label-sm text-label-sm uppercase tracking-widest">
+                                    Saved Piece
+                                  </span>
                                 </div>
                                 <div className="p-5 copper-accent space-y-2">
                                   <span className="text-label-sm font-label-sm text-primary-container tracking-widest uppercase block">
-                                    {product.category || "SUSTAINABLE LUXURY"}
+                                    Sustainable Luxury
                                   </span>
                                   <h4 className="font-headline-sm text-lg text-on-surface group-hover:text-primary transition-colors leading-tight">
-                                    {product.name}
+                                    Wishlisted Product
                                   </h4>
                                   <p className="text-on-surface-variant text-xs line-clamp-1 italic">
-                                    {product.specs}
+                                    Product ID: {productId}
                                   </p>
                                 </div>
                               </div>
                               <div className="px-5 pb-5 pt-1 flex items-center justify-between border-t border-outline-variant/10 mt-auto">
                                 <span className="font-label-md text-label-md text-secondary font-bold">
-                                  ${product.price.toLocaleString()}
+                                  View details
                                 </span>
                                 <span className="text-xs font-semibold text-primary group-hover:underline flex items-center gap-1">
                                   View Details

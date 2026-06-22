@@ -9,8 +9,36 @@ import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { setCartOpen, removeFromCart, clearCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import { toggleWishlist } from "@/lib/features/wishlist/wishlistSlice";
-import { fetchProducts } from "@/services/api";
+import { fetchProducts, ProductFilters } from "@/services/api";
 import { ApiProduct } from "@/types";
+
+const filterOptions = {
+  category: ["rings", "pendants", "chains", "earrings", "bracelets", "necklaces"],
+  gender: ["men", "women", "unisex"],
+  metalType: ["gold", "silver"],
+  metalColor: ["yellow", "white", "rose"],
+  purity: ["10K", "14K", "925"],
+  stoneType: ["natural_diamond", "lab_grown_diamond", "gemstone", "none"],
+  sort: ["price_asc", "price_desc", "newest", "popular"],
+  limit: [10, 20, 40],
+};
+
+const defaultFilters: ProductFilters = {
+  category: "",
+  subCategory: "",
+  collection: "",
+  metalType: "",
+  metalColor: "",
+  purity: "",
+  gender: "",
+  shape: "",
+  stoneType: "",
+  minPrice: "",
+  maxPrice: "",
+  sort: "",
+  page: 1,
+  limit: 20,
+};
 
 const formatLabel = (value?: string) =>
   value
@@ -79,6 +107,73 @@ const getProductSpec = (product: ApiProduct) => {
 const getAvailableSizeCount = (product: ApiProduct) =>
   product.sizeMatrix?.filter((size) => size.isAvailable).length || 0;
 
+const buildApiFilters = (filters: ProductFilters): ProductFilters => ({
+  ...filters,
+  minPrice: filters.minPrice?.trim(),
+  maxPrice: filters.maxPrice?.trim(),
+  subCategory: filters.subCategory?.trim(),
+  collection: filters.collection?.trim(),
+  shape: filters.shape?.trim(),
+});
+
+const SelectFilter = ({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value?: string;
+  options: string[];
+  onChange: (value: string) => void;
+}) => (
+  <label className="flex flex-col gap-2">
+    <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+      {label}
+    </span>
+    <select
+      value={value || ""}
+      onChange={(event) => onChange(event.target.value)}
+      className="h-11 rounded-lg border border-outline-variant/50 bg-surface-container-lowest px-3 text-label-sm text-on-surface outline-none transition-colors focus:border-primary"
+    >
+      <option value="">All</option>
+      {options.map((option) => (
+        <option key={option} value={option}>
+          {formatLabel(option)}
+        </option>
+      ))}
+    </select>
+  </label>
+);
+
+const TextFilter = ({
+  label,
+  value,
+  placeholder,
+  type = "text",
+  onChange,
+}: {
+  label: string;
+  value?: string;
+  placeholder: string;
+  type?: "text" | "number";
+  onChange: (value: string) => void;
+}) => (
+  <label className="flex flex-col gap-2">
+    <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+      {label}
+    </span>
+    <input
+      type={type}
+      min={type === "number" ? 0 : undefined}
+      value={value || ""}
+      placeholder={placeholder}
+      onChange={(event) => onChange(event.target.value)}
+      className="h-11 rounded-lg border border-outline-variant/50 bg-surface-container-lowest px-3 text-label-sm text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/50 focus:border-primary"
+    />
+  </label>
+);
+
 export default function Collections() {
   const dispatch = useAppDispatch();
   const cartOpen = useAppSelector((state) => state.cart.isOpen);
@@ -89,6 +184,9 @@ export default function Collections() {
   const [navScrolled, setNavScrolled] = useState(false);
 
   const isInWishlist = (id: string) => wishlistItems.includes(id);
+
+  const [filters, setFilters] = useState<ProductFilters>(defaultFilters);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Navigation glassmorphism on scroll
   useEffect(() => {
@@ -106,16 +204,39 @@ export default function Collections() {
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const updateFilter = (key: keyof ProductFilters, value: string | number) => {
+    setFilters((current) => ({
+      ...current,
+      [key]: value,
+      page: key === "page" ? Number(value) : 1,
+    }));
+  };
+
+  const resetFilters = () => {
+    setFilters(defaultFilters);
+  };
+
   useEffect(() => {
+    let isMounted = true;
+
     const loadProducts = async () => {
-      const fetchedProducts = await fetchProducts();
-      setProducts(fetchedProducts);
-      setIsLoading(false);
+      setIsLoading(true);
+      const fetchedProducts = await fetchProducts(buildApiFilters(filters));
+      if (isMounted) {
+        setProducts(fetchedProducts);
+        setIsLoading(false);
+      }
     };
     loadProducts();
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [filters]);
 
   const sortedProducts = products;
+  const hasNextPage = sortedProducts.length >= (filters.limit || 20);
+  const currentPage = filters.page || 1;
 
   return (
     <div className="collections-theme min-h-screen flex flex-col relative overflow-x-hidden selection:bg-secondary-container selection:text-on-secondary-container">
@@ -143,6 +264,165 @@ export default function Collections() {
             </div>
           </header>
 
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
+          <aside className="lg:sticky lg:top-32 lg:self-start">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            className="mb-3 flex w-full items-center justify-between rounded-xl border border-outline-variant/40 bg-surface-bright px-4 py-3 text-left lg:hidden"
+          >
+            <span className="text-[11px] font-bold uppercase tracking-widest text-on-surface">
+              Filter Collection
+            </span>
+            <span className="material-symbols-outlined text-primary">
+              {filtersOpen ? "close" : "menu"}
+            </span>
+          </button>
+          <section className={`${filtersOpen ? "block" : "hidden"} rounded-xl border border-outline-variant/30 bg-surface-bright p-3 md:p-4 lg:block`}>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-[11px] font-bold uppercase tracking-widest text-on-surface">
+                Filter Collection
+              </h2>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="rounded-full border border-outline-variant/50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              <SelectFilter
+                label="Category"
+                value={filters.category}
+                options={filterOptions.category}
+                onChange={(value) => updateFilter("category", value)}
+              />
+              <SelectFilter
+                label="Metal Type"
+                value={filters.metalType}
+                options={filterOptions.metalType}
+                onChange={(value) => updateFilter("metalType", value)}
+              />
+              <SelectFilter
+                label="Metal Color"
+                value={filters.metalColor}
+                options={filterOptions.metalColor}
+                onChange={(value) => updateFilter("metalColor", value)}
+              />
+              <SelectFilter
+                label="Purity"
+                value={filters.purity}
+                options={filterOptions.purity}
+                onChange={(value) => updateFilter("purity", value)}
+              />
+              <SelectFilter
+                label="Stone Type"
+                value={filters.stoneType}
+                options={filterOptions.stoneType}
+                onChange={(value) => updateFilter("stoneType", value)}
+              />
+              <SelectFilter
+                label="Sort"
+                value={filters.sort}
+                options={filterOptions.sort}
+                onChange={(value) => updateFilter("sort", value)}
+              />
+            </div>
+
+            <details className="mt-3 rounded-lg border border-outline-variant/30 bg-surface-container-lowest/60">
+              <summary className="cursor-pointer px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                More Filters
+              </summary>
+              <div className="grid grid-cols-1 gap-3 border-t border-outline-variant/30 p-3">
+                <TextFilter
+                  label="Sub Category"
+                  value={filters.subCategory}
+                  placeholder="solitaire-rings"
+                  onChange={(value) => updateFilter("subCategory", value)}
+                />
+                <TextFilter
+                  label="Collection"
+                  value={filters.collection}
+                  placeholder="solitaire"
+                  onChange={(value) => updateFilter("collection", value)}
+                />
+                <SelectFilter
+                  label="Gender"
+                  value={filters.gender}
+                  options={filterOptions.gender}
+                  onChange={(value) => updateFilter("gender", value)}
+                />
+                <TextFilter
+                  label="Shape"
+                  value={filters.shape}
+                  placeholder="emerald"
+                  onChange={(value) => updateFilter("shape", value)}
+                />
+                <TextFilter
+                  label="Min Price"
+                  value={filters.minPrice}
+                  placeholder="500"
+                  type="number"
+                  onChange={(value) => updateFilter("minPrice", value)}
+                />
+                <TextFilter
+                  label="Max Price"
+                  value={filters.maxPrice}
+                  placeholder="2000"
+                  type="number"
+                  onChange={(value) => updateFilter("maxPrice", value)}
+                />
+              </div>
+            </details>
+
+            <div className="mt-3 flex flex-col gap-3 border-t border-outline-variant/30 pt-3">
+              <label className="flex w-full flex-col gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                  Limit
+                </span>
+                <select
+                  value={filters.limit || 20}
+                  onChange={(event) => updateFilter("limit", Number(event.target.value))}
+                  className="h-11 rounded-lg border border-outline-variant/50 bg-surface-container-lowest px-3 text-label-sm text-on-surface outline-none transition-colors focus:border-primary"
+                >
+                  {filterOptions.limit.map((limit) => (
+                    <option key={limit} value={limit}>
+                      {limit} products
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  disabled={currentPage <= 1 || isLoading}
+                  onClick={() => updateFilter("page", Math.max(currentPage - 1, 1))}
+                  className="rounded-lg border border-outline-variant/50 px-4 py-2 text-label-sm font-bold text-on-surface transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:not-disabled:border-primary hover:not-disabled:text-primary"
+                >
+                  Previous
+                </button>
+                <span className="text-label-sm text-on-surface-variant">
+                  Page {currentPage}
+                </span>
+                <button
+                  type="button"
+                  disabled={!hasNextPage || isLoading}
+                  onClick={() => updateFilter("page", currentPage + 1)}
+                  className="rounded-lg border border-outline-variant/50 px-4 py-2 text-label-sm font-bold text-on-surface transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:not-disabled:border-primary hover:not-disabled:text-primary"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </section>
+          </aside>
+
+          <div className="min-w-0">
+
           {isLoading ? (
             <div className="h-[400px] flex flex-col items-center justify-center text-center space-y-4">
               <span className="material-symbols-outlined text-outline-variant text-6xl animate-pulse">
@@ -163,7 +443,7 @@ export default function Collections() {
             </div>
           ) : (
             <div
-              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-gutter"
+              className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-gutter"
               id="product-grid"
             >
               {sortedProducts.map((product, index) => {
@@ -260,6 +540,8 @@ export default function Collections() {
               })}
             </div>
           )}
+          </div>
+          </div>
         </section>
       </main>
 
