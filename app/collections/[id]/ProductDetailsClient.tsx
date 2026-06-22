@@ -6,7 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import ProfileDialog from "@/components/ProfileDialog";
-import { ApiProduct } from "@/types";
+import { ApiCategory, ApiProduct } from "@/types";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { setCartOpen, addToCart, removeFromCart, clearCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
@@ -22,6 +22,11 @@ const formatLabel = (value?: string) =>
       .replace(/[_-]/g, " ")
       .replace(/\b\w/g, (char) => char.toUpperCase())
     : "";
+
+const getTaxonomyLabel = (value?: string | ApiCategory) => {
+  if (!value) return "";
+  return typeof value === "string" ? formatLabel(value) : value.name || formatLabel(value.slug);
+};
 
 const getProductName = (product: ApiProduct) =>
   product.name || product.title || "Untitled Masterpiece";
@@ -119,7 +124,10 @@ export default function ProductDetailsClient({
   const [selectedImage, setSelectedImage] = useState(imageUrls[0] || "");
   const [selectedPurity, setSelectedPurity] = useState(initialPurity);
   const [selectedMetalColor, setSelectedMetalColor] = useState(initialMetalColor);
-  const [selectedSize, setSelectedSize] = useState("Select your size");
+  const initialAvailableSizes = getAvailableSizes(product);
+  const singleSizeValue =
+    initialAvailableSizes.length === 1 ? initialAvailableSizes[0].size : "Select your size";
+  const [selectedSize, setSelectedSize] = useState(singleSizeValue);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -133,6 +141,9 @@ export default function ProductDetailsClient({
   const uniquePurities = Array.from(new Set(availableOptions.map((option) => option.purity)));
   const metalsForPurity = availableOptions.filter((option) => option.purity === selectedPurity);
   const availableSizes = getAvailableSizes(product);
+  const shouldShowSizeSelector = availableSizes.length > 1;
+  const fallbackSizeValue =
+    availableSizes.length === 1 ? availableSizes[0].size : "Select your size";
   const selectedSizeObj = availableSizes.find((size) => size.size === selectedSize);
   const selectedInventory = selectedSizeObj
     ? getInventoryForSelection(selectedSizeObj, selectedPurity, selectedMetalColor)
@@ -242,7 +253,7 @@ export default function ProductDetailsClient({
                 </Link>
                 <span>/</span>
                 <span className="text-on-surface-variant font-medium">
-                  {formatLabel(product.subCategory || product.category)}
+                  {getTaxonomyLabel(product.subCategory) || getTaxonomyLabel(product.category)}
                 </span>
               </nav>
 
@@ -293,7 +304,7 @@ export default function ProductDetailsClient({
                             "";
                           setSelectedPurity(purity);
                           setSelectedMetalColor(nextMetalColor);
-                          setSelectedSize("Select your size");
+                          setSelectedSize(fallbackSizeValue);
                         }}
                       >
                         {purity}
@@ -319,7 +330,7 @@ export default function ProductDetailsClient({
                         title={`${metalObj.purity} ${formatLabel(metalObj.metalColor)} ${formatLabel(metalObj.metalType)}`}
                         onClick={() => {
                           setSelectedMetalColor(metalObj.metalColor);
-                          setSelectedSize("Select your size");
+                          setSelectedSize(fallbackSizeValue);
                         }}
                       >
                         <div
@@ -332,7 +343,7 @@ export default function ProductDetailsClient({
                 </div>
               )}
 
-              {availableSizes.length > 0 && (
+              {shouldShowSizeSelector && (
                 <div className="mb-6">
                   <h3 className="font-label-md text-label-md uppercase tracking-widest mb-4">
                     Ring Size
@@ -546,7 +557,7 @@ export default function ProductDetailsClient({
                         {suggestionName}
                       </h4>
                       <p className="font-label-sm text-on-surface-variant uppercase tracking-wider mt-1">
-                        {formatLabel(p.stoneType)} - {formatLabel(p.subCategory || p.category)}
+                        {formatLabel(p.stoneType)} - {getTaxonomyLabel(p.subCategory) || getTaxonomyLabel(p.category)}
                       </p>
                       <p className="font-label-md text-secondary font-bold mt-2">
                         ${price.toLocaleString()}

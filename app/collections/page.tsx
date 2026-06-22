@@ -9,11 +9,10 @@ import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { setCartOpen, removeFromCart, clearCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import { toggleWishlist } from "@/lib/features/wishlist/wishlistSlice";
-import { fetchProducts, ProductFilters } from "@/services/api";
-import { ApiProduct } from "@/types";
+import { fetchProductList, ProductFilters } from "@/services/api";
+import { ApiCategory, ApiProduct } from "@/types";
 
 const filterOptions = {
-  category: ["rings", "pendants", "chains", "earrings", "bracelets", "necklaces"],
   gender: ["men", "women", "unisex"],
   metalType: ["gold", "silver"],
   metalColor: ["yellow", "white", "rose"],
@@ -22,6 +21,9 @@ const filterOptions = {
   sort: ["price_asc", "price_desc", "newest", "popular"],
   limit: [10, 20, 40],
 };
+
+type FilterOption = string | { label: string; value: string };
+type LabeledFilterOption = Extract<FilterOption, { label: string; value: string }>;
 
 const defaultFilters: ProductFilters = {
   category: "",
@@ -46,6 +48,38 @@ const formatLabel = (value?: string) =>
         .replace(/[_-]/g, " ")
         .replace(/\b\w/g, (char) => char.toUpperCase())
     : "";
+
+const getTaxonomyLabel = (value?: string | ApiCategory) => {
+  if (!value) return "";
+  return typeof value === "string" ? formatLabel(value) : value.name || formatLabel(value.slug);
+};
+
+const getTaxonomyFilterOption = (
+  value?: string | ApiCategory
+): LabeledFilterOption | null => {
+  if (!value) return null;
+
+  if (typeof value === "string") {
+    return {
+      label: formatLabel(value),
+      value,
+    };
+  }
+
+  return {
+    label: value.name || formatLabel(value.slug),
+    value: value._id,
+  };
+};
+
+const mergeFilterOptions = (existing: FilterOption[], incoming: FilterOption[]) => {
+  const options = new Map<string, FilterOption>();
+  [...existing, ...incoming].forEach((option) => {
+    const value = typeof option === "string" ? option : option.value;
+    options.set(value, option);
+  });
+  return Array.from(options.values());
+};
 
 const getProductName = (product: ApiProduct) =>
   product.name || product.title || "Untitled Masterpiece";
@@ -97,7 +131,7 @@ const getMetalSummary = (product: ApiProduct) => {
 const getProductSpec = (product: ApiProduct) => {
   const caratWeight = product.totalStoneCaratWeight || 0;
   const shape = formatLabel(product.shape);
-  const type = formatLabel(product.subCategory || product.category);
+  const type = getTaxonomyLabel(product.subCategory) || getTaxonomyLabel(product.category);
 
   return [caratWeight ? `${caratWeight.toFixed(2)}ct` : "", shape, type]
     .filter(Boolean)
@@ -124,7 +158,7 @@ const SelectFilter = ({
 }: {
   label: string;
   value?: string;
-  options: string[];
+  options: FilterOption[];
   onChange: (value: string) => void;
 }) => (
   <label className="flex flex-col gap-2">
@@ -138,8 +172,11 @@ const SelectFilter = ({
     >
       <option value="">All</option>
       {options.map((option) => (
-        <option key={option} value={option}>
-          {formatLabel(option)}
+        <option
+          key={typeof option === "string" ? option : option.value}
+          value={typeof option === "string" ? option : option.value}
+        >
+          {typeof option === "string" ? formatLabel(option) : option.label}
         </option>
       ))}
     </select>
@@ -202,6 +239,9 @@ export default function Collections() {
   }, []);
 
   const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<FilterOption[]>([]);
+  const [subCategoryOptions, setSubCategoryOptions] = useState<FilterOption[]>([]);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   const updateFilter = (key: keyof ProductFilters, value: string | number) => {
@@ -221,9 +261,26 @@ export default function Collections() {
 
     const loadProducts = async () => {
       setIsLoading(true);
-      const fetchedProducts = await fetchProducts(buildApiFilters(filters));
+      const fetchedProducts = await fetchProductList(buildApiFilters(filters));
       if (isMounted) {
-        setProducts(fetchedProducts);
+        setProducts(fetchedProducts.products);
+        setCategoryOptions((current) =>
+          mergeFilterOptions(
+            current,
+            fetchedProducts.products
+              .map((product) => getTaxonomyFilterOption(product.category))
+              .filter((option): option is LabeledFilterOption => Boolean(option))
+          )
+        );
+        setSubCategoryOptions((current) =>
+          mergeFilterOptions(
+            current,
+            fetchedProducts.products
+              .map((product) => getTaxonomyFilterOption(product.subCategory))
+              .filter((option): option is LabeledFilterOption => Boolean(option))
+          )
+        );
+        setTotalProducts(fetchedProducts.total);
         setIsLoading(false);
       }
     };
@@ -235,8 +292,8 @@ export default function Collections() {
   }, [filters]);
 
   const sortedProducts = products;
-  const hasNextPage = sortedProducts.length >= (filters.limit || 20);
   const currentPage = filters.page || 1;
+  const hasNextPage = currentPage * (filters.limit || 20) < totalProducts;
 
   return (
     <div className="collections-theme min-h-screen flex flex-col relative overflow-x-hidden selection:bg-secondary-container selection:text-on-secondary-container">
@@ -298,7 +355,7 @@ export default function Collections() {
               <SelectFilter
                 label="Category"
                 value={filters.category}
-                options={filterOptions.category}
+                options={categoryOptions}
                 onChange={(value) => updateFilter("category", value)}
               />
               <SelectFilter
@@ -338,10 +395,10 @@ export default function Collections() {
                 More Filters
               </summary>
               <div className="grid grid-cols-1 gap-3 border-t border-outline-variant/30 p-3">
-                <TextFilter
+                <SelectFilter
                   label="Sub Category"
                   value={filters.subCategory}
-                  placeholder="solitaire-rings"
+                  options={subCategoryOptions}
                   onChange={(value) => updateFilter("subCategory", value)}
                 />
                 <TextFilter
@@ -422,6 +479,14 @@ export default function Collections() {
           </aside>
 
           <div className="min-w-0">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <p className="text-label-sm text-on-surface-variant">
+              Showing {sortedProducts.length} of {totalProducts} products
+            </p>
+            <p className="text-label-sm text-on-surface-variant">
+              Page {currentPage}
+            </p>
+          </div>
 
           {isLoading ? (
             <div className="h-[400px] flex flex-col items-center justify-center text-center space-y-4">

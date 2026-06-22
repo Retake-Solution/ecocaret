@@ -1,3 +1,16 @@
+export interface ApiCategory {
+  _id: string;
+  name: string;
+  slug: string;
+  parentId?: string | null;
+  parentSlug?: string | null;
+  level?: number;
+  isActive?: boolean;
+  sortOrder?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ApiProduct {
   ratings?: {
     average: number;
@@ -12,8 +25,8 @@ export interface ApiProduct {
   shortDescription?: string;
   sourceUrl?: string;
   categoryId?: string;
-  category?: string;
-  subCategory?: string;
+  category?: string | ApiCategory;
+  subCategory?: string | ApiCategory;
   collectionIds?: string[];
   collection?: string[];
   gender: string;
@@ -63,6 +76,7 @@ export interface ApiProduct {
       name: string;
       slug?: string;
       stoneType: string;
+      stoneCount?: number;
       caratWeight: number;
       clarity: string;
       cut: string;
