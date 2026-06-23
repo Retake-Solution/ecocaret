@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import CartDrawer from "@/components/CartDrawer";
 import ProfileDialog from "@/components/ProfileDialog";
@@ -45,8 +46,8 @@ const defaultFilters: ProductFilters = {
 const formatLabel = (value?: string) =>
   value
     ? value
-        .replace(/[_-]/g, " ")
-        .replace(/\b\w/g, (char) => char.toUpperCase())
+      .replace(/[_-]/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase())
     : "";
 
 const getTaxonomyLabel = (value?: string | ApiCategory) => {
@@ -85,10 +86,12 @@ const getProductName = (product: ApiProduct) =>
   product.name || product.title || "Untitled Masterpiece";
 
 const getProductImage = (product: ApiProduct) => {
-  if (product.images?.[0]) return product.images[0];
+  const firstColorImageGroup = product.colorImages?.[0];
+  const primaryImage =
+    firstColorImageGroup?.images.find((image) => image.isPrimary) ||
+    firstColorImageGroup?.images[0];
 
-  const firstColorImage = product.colorImages?.[0];
-  return firstColorImage?.url || firstColorImage?.imageUrl || firstColorImage?.src || "";
+  return primaryImage?.url || "";
 };
 
 const getProductPrice = (product: ApiProduct) => {
@@ -120,9 +123,8 @@ const getMetalSummary = (product: ApiProduct) => {
       new Set(options.map((option) => formatLabel(option.metalColor)))
     );
     const purities = Array.from(new Set(options.map((option) => option.purity)));
-    return `${colors.slice(0, 3).join(", ")} Gold${
-      purities.length ? ` · ${purities.join("/")}` : ""
-    }`;
+    return `${colors.slice(0, 3).join(", ")} Gold${purities.length ? ` · ${purities.join("/")}` : ""
+      }`;
   }
 
   return "";
@@ -212,6 +214,47 @@ const TextFilter = ({
 );
 
 export default function Collections() {
+  return (
+    <Suspense fallback={<CollectionsFallback />}>
+      <CollectionsContent />
+    </Suspense>
+  );
+}
+
+function CollectionsFallback() {
+  return (
+    <div className="collections-theme min-h-screen flex flex-col items-center justify-center text-center selection:bg-secondary-container selection:text-on-secondary-container">
+      <span className="material-symbols-outlined text-outline-variant text-6xl animate-pulse">
+        diamond
+      </span>
+      <p className="mt-4 font-headline-sm text-headline-sm text-on-surface">
+        Loading Masterpieces
+      </p>
+    </div>
+  );
+}
+
+function CollectionsContent() {
+  const searchParams = useSearchParams();
+  const urlCategory = searchParams.get("category") || "";
+  const urlSubCategory = searchParams.get("subcategory") || searchParams.get("subCategory") || "";
+
+  return (
+    <CollectionsList
+      key={`${urlCategory}:${urlSubCategory}`}
+      initialCategory={urlCategory}
+      initialSubCategory={urlSubCategory}
+    />
+  );
+}
+
+function CollectionsList({
+  initialCategory,
+  initialSubCategory,
+}: {
+  initialCategory: string;
+  initialSubCategory: string;
+}) {
   const dispatch = useAppDispatch();
   const cartOpen = useAppSelector((state) => state.cart.isOpen);
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
@@ -222,7 +265,11 @@ export default function Collections() {
 
   const isInWishlist = (id: string) => wishlistItems.includes(id);
 
-  const [filters, setFilters] = useState<ProductFilters>(defaultFilters);
+  const [filters, setFilters] = useState<ProductFilters>(() => ({
+    ...defaultFilters,
+    category: initialCategory,
+    subCategory: initialSubCategory,
+  }));
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Navigation glassmorphism on scroll
@@ -253,7 +300,11 @@ export default function Collections() {
   };
 
   const resetFilters = () => {
-    setFilters(defaultFilters);
+    setFilters({
+      ...defaultFilters,
+      category: initialCategory,
+      subCategory: initialSubCategory,
+    });
   };
 
   useEffect(() => {
@@ -322,290 +373,290 @@ export default function Collections() {
           </header>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
-          <aside className="lg:sticky lg:top-32 lg:self-start">
-          <button
-            type="button"
-            onClick={() => setFiltersOpen((open) => !open)}
-            className="mb-3 flex w-full items-center justify-between rounded-xl border border-outline-variant/40 bg-surface-bright px-4 py-3 text-left lg:hidden"
-          >
-            <span className="text-[11px] font-bold uppercase tracking-widest text-on-surface">
-              Filter Collection
-            </span>
-            <span className="material-symbols-outlined text-primary">
-              {filtersOpen ? "close" : "menu"}
-            </span>
-          </button>
-          <section className={`${filtersOpen ? "block" : "hidden"} rounded-xl border border-outline-variant/30 bg-surface-bright p-3 md:p-4 lg:block`}>
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-[11px] font-bold uppercase tracking-widest text-on-surface">
-                Filter Collection
-              </h2>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="rounded-full border border-outline-variant/50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
-                >
-                  Reset
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3">
-              <SelectFilter
-                label="Category"
-                value={filters.category}
-                options={categoryOptions}
-                onChange={(value) => updateFilter("category", value)}
-              />
-              <SelectFilter
-                label="Metal Type"
-                value={filters.metalType}
-                options={filterOptions.metalType}
-                onChange={(value) => updateFilter("metalType", value)}
-              />
-              <SelectFilter
-                label="Metal Color"
-                value={filters.metalColor}
-                options={filterOptions.metalColor}
-                onChange={(value) => updateFilter("metalColor", value)}
-              />
-              <SelectFilter
-                label="Purity"
-                value={filters.purity}
-                options={filterOptions.purity}
-                onChange={(value) => updateFilter("purity", value)}
-              />
-              <SelectFilter
-                label="Stone Type"
-                value={filters.stoneType}
-                options={filterOptions.stoneType}
-                onChange={(value) => updateFilter("stoneType", value)}
-              />
-              <SelectFilter
-                label="Sort"
-                value={filters.sort}
-                options={filterOptions.sort}
-                onChange={(value) => updateFilter("sort", value)}
-              />
-            </div>
-
-            <details className="mt-3 rounded-lg border border-outline-variant/30 bg-surface-container-lowest/60">
-              <summary className="cursor-pointer px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-                More Filters
-              </summary>
-              <div className="grid grid-cols-1 gap-3 border-t border-outline-variant/30 p-3">
-                <SelectFilter
-                  label="Sub Category"
-                  value={filters.subCategory}
-                  options={subCategoryOptions}
-                  onChange={(value) => updateFilter("subCategory", value)}
-                />
-                <TextFilter
-                  label="Collection"
-                  value={filters.collection}
-                  placeholder="solitaire"
-                  onChange={(value) => updateFilter("collection", value)}
-                />
-                <SelectFilter
-                  label="Gender"
-                  value={filters.gender}
-                  options={filterOptions.gender}
-                  onChange={(value) => updateFilter("gender", value)}
-                />
-                <TextFilter
-                  label="Shape"
-                  value={filters.shape}
-                  placeholder="emerald"
-                  onChange={(value) => updateFilter("shape", value)}
-                />
-                <TextFilter
-                  label="Min Price"
-                  value={filters.minPrice}
-                  placeholder="500"
-                  type="number"
-                  onChange={(value) => updateFilter("minPrice", value)}
-                />
-                <TextFilter
-                  label="Max Price"
-                  value={filters.maxPrice}
-                  placeholder="2000"
-                  type="number"
-                  onChange={(value) => updateFilter("maxPrice", value)}
-                />
-              </div>
-            </details>
-
-            <div className="mt-3 flex flex-col gap-3 border-t border-outline-variant/30 pt-3">
-              <label className="flex w-full flex-col gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-                  Limit
+            <aside className="lg:sticky lg:top-32 lg:self-start">
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((open) => !open)}
+                className="mb-3 flex w-full items-center justify-between rounded-xl border border-outline-variant/40 bg-surface-bright px-4 py-3 text-left lg:hidden"
+              >
+                <span className="text-[11px] font-bold uppercase tracking-widest text-on-surface">
+                  Filter Collection
                 </span>
-                <select
-                  value={filters.limit || 20}
-                  onChange={(event) => updateFilter("limit", Number(event.target.value))}
-                  className="h-11 rounded-lg border border-outline-variant/50 bg-surface-container-lowest px-3 text-label-sm text-on-surface outline-none transition-colors focus:border-primary"
-                >
-                  {filterOptions.limit.map((limit) => (
-                    <option key={limit} value={limit}>
-                      {limit} products
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  disabled={currentPage <= 1 || isLoading}
-                  onClick={() => updateFilter("page", Math.max(currentPage - 1, 1))}
-                  className="rounded-lg border border-outline-variant/50 px-4 py-2 text-label-sm font-bold text-on-surface transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:not-disabled:border-primary hover:not-disabled:text-primary"
-                >
-                  Previous
-                </button>
-                <span className="text-label-sm text-on-surface-variant">
-                  Page {currentPage}
+                <span className="material-symbols-outlined text-primary">
+                  {filtersOpen ? "close" : "menu"}
                 </span>
-                <button
-                  type="button"
-                  disabled={!hasNextPage || isLoading}
-                  onClick={() => updateFilter("page", currentPage + 1)}
-                  className="rounded-lg border border-outline-variant/50 px-4 py-2 text-label-sm font-bold text-on-surface transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:not-disabled:border-primary hover:not-disabled:text-primary"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          </section>
-          </aside>
-
-          <div className="min-w-0">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <p className="text-label-sm text-on-surface-variant">
-              Showing {sortedProducts.length} of {totalProducts} products
-            </p>
-            <p className="text-label-sm text-on-surface-variant">
-              Page {currentPage}
-            </p>
-          </div>
-
-          {isLoading ? (
-            <div className="h-[400px] flex flex-col items-center justify-center text-center space-y-4">
-              <span className="material-symbols-outlined text-outline-variant text-6xl animate-pulse">
-                diamond
-              </span>
-              <p className="font-headline-sm text-headline-sm text-on-surface">
-                Loading Masterpieces
-              </p>
-            </div>
-          ) : sortedProducts.length === 0 ? (
-            <div className="h-[400px] flex flex-col items-center justify-center text-center space-y-4">
-              <span className="material-symbols-outlined text-outline-variant text-6xl">
-                diamond
-              </span>
-              <p className="font-headline-sm text-headline-sm text-on-surface">
-                No Masterpieces Found
-              </p>
-            </div>
-          ) : (
-            <div
-              className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-gutter"
-              id="product-grid"
-            >
-              {sortedProducts.map((product, index) => {
-                const productName = getProductName(product);
-                const productImage = getProductImage(product);
-                const price = getProductPrice(product);
-                const spec = getProductSpec(product);
-                const metalSummary = getMetalSummary(product);
-                const availableSizeCount = getAvailableSizeCount(product);
-
-                return (
-                  <div
-                    key={product._id}
-                    style={{ animationDelay: `${index * 80}ms` }}
-                    className="grid-item ripple-fade product-card group relative overflow-hidden bg-surface-container-lowest rounded-xl shadow-sm flex flex-col justify-between cursor-pointer"
-                  >
-                  <Link href={`/collections/${product._id}`} className="flex flex-col justify-between flex-grow h-full">
-                    <div className="aspect-[0.75] overflow-hidden relative bg-surface-container">
-                      {productImage ? (
-                        <img
-                          alt={productName}
-                          className="parallax-img w-full h-full object-cover"
-                          src={productImage}
-                        />
-                      ) : (
-                        <div className="parallax-img w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-surface-container-lowest via-surface-container-low to-secondary-container/30 text-primary">
-                          <span className="material-symbols-outlined text-6xl mb-3">
-                            diamond
-                          </span>
-                          <span className="font-label-sm text-label-sm uppercase tracking-widest">
-                            Image Coming Soon
-                          </span>
-                        </div>
-                      )}
-                      {product.isNewArrival && (
-                        <span className="absolute top-4 left-4 bg-secondary text-on-secondary rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest">
-                          New
-                        </span>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-surface/90 via-surface/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            dispatch(toggleWishlist(product._id));
-                          }}
-                          className="absolute top-4 right-4 text-primary opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-[-10px] group-hover:translate-y-0 cursor-pointer z-10"
-                        >
-                          <span className={`material-symbols-outlined ${isInWishlist(product._id) ? "fill-[1]" : ""}`}>
-                            favorite
-                          </span>
-                        </button>
-                      </div>
-                      <div className="p-4 md:p-6 relative flex-grow flex flex-col justify-between">
-                        <div>
-                        <h4 className="font-headline-md text-label-md md:text-headline-md text-on-surface mb-1 group-hover:text-primary transition-colors duration-300 line-clamp-2 md:line-clamp-none">
-                          {productName}
-                        </h4>
-                        <p className="text-on-surface-variant text-[11px] md:font-body-md mb-2 md:mb-4 opacity-80">
-                          {formatLabel(product.stoneType)}
-                          {metalSummary ? ` · ${metalSummary}` : ""}
-                        </p>
-                        </div>
-                        <p className="text-primary font-bold text-label-md md:text-body-lg">
-                          ${price.toLocaleString()}
-                        </p>
-
-                        {/* Hover Details overlay */}
-                        <div className="absolute inset-x-0 bottom-0 p-4 md:p-6 bg-primary text-on-primary translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out flex justify-between items-center">
-                          <div className="hidden md:block">
-                            <p className="text-[10px] uppercase tracking-tighter opacity-80 font-bold">
-                              Specification
-                            </p>
-                          <p className="font-bold text-sm">
-                              {spec || "Made-to-order jewelry"}
-                          </p>
-                          {availableSizeCount > 0 && (
-                            <p className="text-xs opacity-80 mt-1">
-                              {availableSizeCount} sizes available
-                            </p>
-                          )}
-                        </div>
-                          <span className="font-label-sm uppercase tracking-widest flex items-center gap-1 md:gap-2 group/btn font-bold text-[10px] md:text-xs">
-                            Shop
-                            <span className="material-symbols-outlined text-[14px] md:text-sm group-hover/btn:translate-x-1 transition-transform">
-                              arrow_forward
-                            </span>
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
+              </button>
+              <section className={`${filtersOpen ? "block" : "hidden"} rounded-xl border border-outline-variant/30 bg-surface-bright p-3 md:p-4 lg:block`}>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-[11px] font-bold uppercase tracking-widest text-on-surface">
+                    Filter Collection
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="rounded-full border border-outline-variant/50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
+                    >
+                      Reset
+                    </button>
                   </div>
-                );
-              })}
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  <SelectFilter
+                    label="Category"
+                    value={filters.category}
+                    options={categoryOptions}
+                    onChange={(value) => updateFilter("category", value)}
+                  />
+                  <SelectFilter
+                    label="Metal Type"
+                    value={filters.metalType}
+                    options={filterOptions.metalType}
+                    onChange={(value) => updateFilter("metalType", value)}
+                  />
+                  <SelectFilter
+                    label="Metal Color"
+                    value={filters.metalColor}
+                    options={filterOptions.metalColor}
+                    onChange={(value) => updateFilter("metalColor", value)}
+                  />
+                  <SelectFilter
+                    label="Purity"
+                    value={filters.purity}
+                    options={filterOptions.purity}
+                    onChange={(value) => updateFilter("purity", value)}
+                  />
+                  <SelectFilter
+                    label="Stone Type"
+                    value={filters.stoneType}
+                    options={filterOptions.stoneType}
+                    onChange={(value) => updateFilter("stoneType", value)}
+                  />
+                  <SelectFilter
+                    label="Sort"
+                    value={filters.sort}
+                    options={filterOptions.sort}
+                    onChange={(value) => updateFilter("sort", value)}
+                  />
+                </div>
+
+                <details className="mt-3 rounded-lg border border-outline-variant/30 bg-surface-container-lowest/60">
+                  <summary className="cursor-pointer px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                    More Filters
+                  </summary>
+                  <div className="grid grid-cols-1 gap-3 border-t border-outline-variant/30 p-3">
+                    <SelectFilter
+                      label="Sub Category"
+                      value={filters.subCategory}
+                      options={subCategoryOptions}
+                      onChange={(value) => updateFilter("subCategory", value)}
+                    />
+                    <TextFilter
+                      label="Collection"
+                      value={filters.collection}
+                      placeholder="solitaire"
+                      onChange={(value) => updateFilter("collection", value)}
+                    />
+                    <SelectFilter
+                      label="Gender"
+                      value={filters.gender}
+                      options={filterOptions.gender}
+                      onChange={(value) => updateFilter("gender", value)}
+                    />
+                    <TextFilter
+                      label="Shape"
+                      value={filters.shape}
+                      placeholder="emerald"
+                      onChange={(value) => updateFilter("shape", value)}
+                    />
+                    <TextFilter
+                      label="Min Price"
+                      value={filters.minPrice}
+                      placeholder="500"
+                      type="number"
+                      onChange={(value) => updateFilter("minPrice", value)}
+                    />
+                    <TextFilter
+                      label="Max Price"
+                      value={filters.maxPrice}
+                      placeholder="2000"
+                      type="number"
+                      onChange={(value) => updateFilter("maxPrice", value)}
+                    />
+                  </div>
+                </details>
+
+                <div className="mt-3 flex flex-col gap-3 border-t border-outline-variant/30 pt-3">
+                  <label className="flex w-full flex-col gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                      Limit
+                    </span>
+                    <select
+                      value={filters.limit || 20}
+                      onChange={(event) => updateFilter("limit", Number(event.target.value))}
+                      className="h-11 rounded-lg border border-outline-variant/50 bg-surface-container-lowest px-3 text-label-sm text-on-surface outline-none transition-colors focus:border-primary"
+                    >
+                      {filterOptions.limit.map((limit) => (
+                        <option key={limit} value={limit}>
+                          {limit} products
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      disabled={currentPage <= 1 || isLoading}
+                      onClick={() => updateFilter("page", Math.max(currentPage - 1, 1))}
+                      className="rounded-lg border border-outline-variant/50 px-4 py-2 text-label-sm font-bold text-on-surface transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:not-disabled:border-primary hover:not-disabled:text-primary"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-label-sm text-on-surface-variant">
+                      Page {currentPage}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={!hasNextPage || isLoading}
+                      onClick={() => updateFilter("page", currentPage + 1)}
+                      className="rounded-lg border border-outline-variant/50 px-4 py-2 text-label-sm font-bold text-on-surface transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:not-disabled:border-primary hover:not-disabled:text-primary"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </aside>
+
+            <div className="min-w-0">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <p className="text-label-sm text-on-surface-variant">
+                  Showing {sortedProducts.length} of {totalProducts} products
+                </p>
+                <p className="text-label-sm text-on-surface-variant">
+                  Page {currentPage}
+                </p>
+              </div>
+
+              {isLoading ? (
+                <div className="h-[400px] flex flex-col items-center justify-center text-center space-y-4">
+                  <span className="material-symbols-outlined text-outline-variant text-6xl animate-pulse">
+                    diamond
+                  </span>
+                  <p className="font-headline-sm text-headline-sm text-on-surface">
+                    Loading Masterpieces
+                  </p>
+                </div>
+              ) : sortedProducts.length === 0 ? (
+                <div className="h-[400px] flex flex-col items-center justify-center text-center space-y-4">
+                  <span className="material-symbols-outlined text-outline-variant text-6xl">
+                    diamond
+                  </span>
+                  <p className="font-headline-sm text-headline-sm text-on-surface">
+                    No Masterpieces Found
+                  </p>
+                </div>
+              ) : (
+                <div
+                  className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-gutter"
+                  id="product-grid"
+                >
+                  {sortedProducts.map((product, index) => {
+                    const productName = getProductName(product);
+                    const productImage = getProductImage(product);
+                    const price = getProductPrice(product);
+                    const spec = getProductSpec(product);
+                    const metalSummary = getMetalSummary(product);
+                    const availableSizeCount = getAvailableSizeCount(product);
+
+                    return (
+                      <div
+                        key={product._id}
+                        style={{ animationDelay: `${index * 80}ms` }}
+                        className="grid-item ripple-fade product-card group relative overflow-hidden bg-surface-container-lowest rounded-xl shadow-sm flex flex-col justify-between cursor-pointer"
+                      >
+                        <Link href={`/collections/${product._id}`} className="flex flex-col justify-between flex-grow h-full">
+                          <div className="aspect-[0.75] overflow-hidden relative bg-surface-container">
+                            {productImage ? (
+                              <img
+                                alt={productName}
+                                className="parallax-img w-full h-full object-cover"
+                                src={productImage}
+                              />
+                            ) : (
+                              <div className="parallax-img w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-surface-container-lowest via-surface-container-low to-secondary-container/30 text-primary">
+                                <span className="material-symbols-outlined text-6xl mb-3">
+                                  diamond
+                                </span>
+                                <span className="font-label-sm text-label-sm uppercase tracking-widest">
+                                  Image Coming Soon
+                                </span>
+                              </div>
+                            )}
+                            {product.isNewArrival && (
+                              <span className="absolute top-4 left-4 bg-secondary text-on-secondary rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest">
+                                New
+                              </span>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-surface/90 via-surface/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                dispatch(toggleWishlist(product._id));
+                              }}
+                              className="absolute top-4 right-4 text-primary opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-[-10px] group-hover:translate-y-0 cursor-pointer z-10"
+                            >
+                              <span className={`material-symbols-outlined ${isInWishlist(product._id) ? "fill-[1]" : ""}`}>
+                                favorite
+                              </span>
+                            </button>
+                          </div>
+                          <div className="p-4 md:p-6 relative flex-grow flex flex-col justify-between">
+                            <div>
+                              <h4 className="font-headline-md text-label-md md:text-headline-md text-on-surface mb-1 group-hover:text-primary transition-colors duration-300 line-clamp-2 md:line-clamp-none">
+                                {productName}
+                              </h4>
+                              <p className="text-on-surface-variant text-[11px] md:font-body-md mb-2 md:mb-4 opacity-80">
+                                {formatLabel(product.stoneType)}
+                                {metalSummary ? ` · ${metalSummary}` : ""}
+                              </p>
+                            </div>
+                            <p className="text-primary font-bold text-label-md md:text-body-lg">
+                              ${price.toLocaleString()}
+                            </p>
+
+                            {/* Hover Details overlay */}
+                            <div className="absolute inset-x-0 bottom-0 p-4 md:p-6 bg-primary text-on-primary translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out flex justify-between items-center">
+                              <div className="hidden md:block">
+                                <p className="text-[10px] uppercase tracking-tighter opacity-80 font-bold">
+                                  Specification
+                                </p>
+                                <p className="font-bold text-sm">
+                                  {spec || "Made-to-order jewelry"}
+                                </p>
+                                {availableSizeCount > 0 && (
+                                  <p className="text-xs opacity-80 mt-1">
+                                    {availableSizeCount} sizes available
+                                  </p>
+                                )}
+                              </div>
+                              <span className="font-label-sm uppercase tracking-widest flex items-center gap-1 md:gap-2 group/btn font-bold text-[10px] md:text-xs">
+                                Shop
+                                <span className="material-symbols-outlined text-[14px] md:text-sm group-hover/btn:translate-x-1 transition-transform">
+                                  arrow_forward
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+                        </Link>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
-          </div>
           </div>
         </section>
       </main>

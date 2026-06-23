@@ -31,11 +31,37 @@ const getTaxonomyLabel = (value?: string | ApiCategory) => {
 const getProductName = (product: ApiProduct) =>
   product.name || product.title || "Untitled Masterpiece";
 
-const getImageUrls = (product: ApiProduct) => {
-  const colorImages =
-    product.colorImages?.map((image) => image.url || image.imageUrl || image.src || "") || [];
+const normalizeMetalColor = (color?: string) =>
+  color?.toLowerCase().replace(/[\s_-]/g, "") || "";
 
-  return [...(product.images || []), ...colorImages].filter(Boolean);
+const colorImageMatchesMetal = (
+  imageGroup: NonNullable<ApiProduct["colorImages"]>[number],
+  metalColor: string
+) => {
+  const imageColor = normalizeMetalColor(imageGroup.metalColor);
+  const selectedColor = normalizeMetalColor(metalColor);
+
+  return Boolean(
+    imageColor &&
+      selectedColor &&
+      (imageColor === selectedColor ||
+        imageColor.includes(selectedColor) ||
+        selectedColor.includes(imageColor))
+  );
+};
+
+const getColorImageUrls = (product: ApiProduct, metalColor?: string) => {
+  const colorImageGroups = product.colorImages || [];
+  const matchingGroups = metalColor
+    ? colorImageGroups.filter((imageGroup) => colorImageMatchesMetal(imageGroup, metalColor))
+    : colorImageGroups;
+
+  return matchingGroups.flatMap((imageGroup) =>
+    [...imageGroup.images]
+      .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary))
+      .map((image) => image.url)
+      .filter(Boolean)
+  );
 };
 
 const getAvailableSizes = (product: ApiProduct) =>
@@ -115,13 +141,13 @@ export default function ProductDetailsClient({
   const cartItems = useAppSelector((state) => state.cart.items);
 
   const productName = getProductName(product);
-  const imageUrls = getImageUrls(product);
   const initialPurity = getInitialPurity(product);
   const initialMetalColor = getInitialMetalColor(product, initialPurity);
   const primaryStone = getPrimaryStone(product);
+  const initialImageUrls = getColorImageUrls(product, initialMetalColor);
 
   const [scrolled, setScrolled] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(imageUrls[0] || "");
+  const [selectedImage, setSelectedImage] = useState(initialImageUrls[0] || "");
   const [selectedPurity, setSelectedPurity] = useState(initialPurity);
   const [selectedMetalColor, setSelectedMetalColor] = useState(initialMetalColor);
   const initialAvailableSizes = getAvailableSizes(product);
@@ -140,6 +166,7 @@ export default function ProductDetailsClient({
   const availableOptions = getAvailableMetalOptions(product);
   const uniquePurities = Array.from(new Set(availableOptions.map((option) => option.purity)));
   const metalsForPurity = availableOptions.filter((option) => option.purity === selectedPurity);
+  const imageUrls = getColorImageUrls(product, selectedMetalColor);
   const availableSizes = getAvailableSizes(product);
   const shouldShowSizeSelector = availableSizes.length > 1;
   const fallbackSizeValue =
@@ -305,6 +332,7 @@ export default function ProductDetailsClient({
                           setSelectedPurity(purity);
                           setSelectedMetalColor(nextMetalColor);
                           setSelectedSize(fallbackSizeValue);
+                          setSelectedImage(getColorImageUrls(product, nextMetalColor)[0] || "");
                         }}
                       >
                         {purity}
@@ -331,6 +359,7 @@ export default function ProductDetailsClient({
                         onClick={() => {
                           setSelectedMetalColor(metalObj.metalColor);
                           setSelectedSize(fallbackSizeValue);
+                          setSelectedImage(getColorImageUrls(product, metalObj.metalColor)[0] || "");
                         }}
                       >
                         <div
@@ -525,7 +554,10 @@ export default function ProductDetailsClient({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {suggestedProducts.map((p) => {
                 const suggestionName = getProductName(p);
-                const suggestionImage = getImageUrls(p)[0];
+                const suggestionImage = getColorImageUrls(
+                  p,
+                  getInitialMetalColor(p, getInitialPurity(p))
+                )[0];
                 const price = getProductPrice(p);
 
                 return (

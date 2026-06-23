@@ -264,45 +264,6 @@ export default function Header({
     )
   }
 
-  const renderChainsMegaMenu = () => {
-    return (
-      <div className="absolute left-0 top-full w-full bg-surface-bright/90 backdrop-blur-xl border-b border-outline-variant/20 shadow-xl transition-all duration-300 z-40 opacity-0 invisible group-hover:opacity-100 group-hover:visible transform -translate-y-2 group-hover:translate-y-0 pointer-events-none group-hover:pointer-events-auto">
-        <div className="max-w-container-max mx-auto px-margin-desktop py-12">
-          <div className="grid grid-cols-3 gap-12">
-            {/* Column 1: Shop By Collection */}
-            <div className="space-y-6">
-              <h3 className="font-headline-sm text-label-md uppercase tracking-widest text-secondary">Shop By Collection</h3>
-              <ul className="space-y-4 max-h-[60vh] flex flex-col flex-wrap gap-x-8">
-                <li><Link className="font-body-md text-on-surface-variant hover:text-primary transition-colors block" href="/collections?collection=snakes">Snakes</Link></li>
-                <li><Link className="font-body-md text-on-surface-variant hover:text-primary transition-colors block" href="/collections?collection=miami-cuban-chains">Miami Cuban Chains</Link></li>
-                <li><Link className="font-body-md text-on-surface-variant hover:text-primary transition-colors block" href="/collections?collection=rope-chains">Rope Chains</Link></li>
-                <li><Link className="font-body-md text-on-surface-variant hover:text-primary transition-colors block" href="/collections?collection=plain-gold">Plain Gold</Link></li>
-              </ul>
-            </div>
-            {/* Column 2: Shop By Gender */}
-            <div className="space-y-6">
-              <h3 className="font-headline-sm text-label-md uppercase tracking-widest text-secondary">Shop By Gender</h3>
-              <ul className="space-y-4">
-                <li><Link className="font-body-md text-on-surface-variant hover:text-primary transition-colors block" href="/collections?gender=men">Men</Link></li>
-                <li><Link className="font-body-md text-on-surface-variant hover:text-primary transition-colors block" href="/collections?gender=women">Women</Link></li>
-                <li><Link className="font-body-md text-on-surface-variant hover:text-primary transition-colors block" href="/collections?gender=unisex">Unisex</Link></li>
-              </ul>
-            </div>
-            {/* Column 3: Shop By Metal */}
-            <div className="space-y-6">
-              <h3 className="font-headline-sm text-label-md uppercase tracking-widest text-secondary">Shop By Metal</h3>
-              <ul className="space-y-4">
-                <li><Link className="font-body-md text-on-surface-variant hover:text-primary transition-colors block" href="/collections?metal=14k-gold">14K Gold</Link></li>
-                <li><Link className="font-body-md text-on-surface-variant hover:text-primary transition-colors block" href="/collections?metal=10k-gold">10K Gold</Link></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-
   return (
     <nav
       id="top-nav"
@@ -395,7 +356,8 @@ export default function Header({
           >
             Chains
           </Link>
-          {renderChainsMegaMenu()}
+          {/* {renderChainsMegaMenu()} */}
+          {renderDynamicMegaMenu(CHAINS_MENU)}
         </div>
 
         <div className="group h-full flex items-center">

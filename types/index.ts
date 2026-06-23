@@ -53,12 +53,14 @@ export interface ApiProduct {
   updatedAt?: string;
   images?: string[];
   colorImages?: Array<{
-    url?: string;
-    imageUrl?: string;
-    src?: string;
-    metalColor?: string;
-    color?: string;
-    alt?: string;
+    metalColor: string,
+    images: Array<{
+      url: string,
+      publicId: string,
+      altText: string,
+      isPrimary: boolean,
+      metalColor: string
+    }>
   }>;
   videos?: string[];
   metalOptions?: {
