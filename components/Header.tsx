@@ -46,8 +46,8 @@ const SHOP_BY_METAL_SECTION = [
 
 
 const BRACELET_COLLECTIONS: Collection[] = [
-  { id: "bangles", label: "Bangles", href: "/collections?collection=bangles" },
-  { id: "bracelets", label: "Bracelets", href: "/collections?collection=bracelets" },
+  { id: "bangles", label: "Bangles", href: "/collections?collection=bangles-bracelets" },
+  { id: "bracelets", label: "Bracelets", href: "/collections?collection=bracelet-bracelets" },
 ];
 
 const NECKLACES_COLLECTIONS: Collection[] = [
@@ -59,53 +59,53 @@ const NECKLACES_COLLECTIONS: Collection[] = [
 
 const PENDANTS_COLLECTIONS: Collection[] = [
   { id: "solitaire", label: "Solitaire", href: "/collections?category=pendants&subcategory=solitaire-pendants" },
-  { id: "cross", label: "Cross", href: "/collections?category=pendants&subcategory=cross" },
-  { id: "heart", label: "Heart", href: "/collections?category=pendants&subcategory=heart" },
-  { id: "initials", label: "Initials", href: "/collections?category=pendants&subcategory=initials" },
-  { id: "halo", label: "Halo", href: "/collections?category=pendants&subcategory=halo" },
-  { id: "music", label: "Music", href: "/collections?category=pendants&subcategory=music" },
-  { id: "wild-life", label: "Wild Life", href: "/collections?category=pendants&subcategory=wild-life" },
-  { id: "infinity", label: "Infinity", href: "/collections?category=pendants&subcategory=infinity" },
-  { id: "spot", label: "Spot", href: "/collections?category=pendants&subcategory=spot" },
-  { id: "plain-gold", label: "Plain Gold", href: "/collections?category=pendants&subcategory=plain-gold" },
-  { id: "patriotic-jewelry", label: "Patriotic Jewelry", href: "/collections?category=pendants&subcategory=patriotic-jewlery" },
-  { id: "fathers-day", label: "Father's Day", href: "/collections?category=pendants&subcategory=fathers-day" },
-  { id: "mom", label: "Mom", href: "/collections?category=pendants&subcategory=mom" },
-  { id: "religious", label: "Religious", href: "/collections?category=pendants&subcategory=religious" },
-  { id: "egyptian-pieces", label: "Egyptian Pieces", href: "/collections?category=pendants&subcategory=egyptian-pieces" },
-  { id: "statement", label: "Statement", href: "/collections?category=pendants&subcategory=statement" },
+  { id: "cross", label: "Cross", href: "/collections?category=pendants&subcategory=cross-pendants" },
+  { id: "heart", label: "Heart", href: "/collections?category=pendants&subcategory=heart-pendants" },
+  { id: "initials", label: "Initials", href: "/collections?category=pendants&subcategory=initials-pendants" },
+  { id: "halo", label: "Halo", href: "/collections?category=pendants&subcategory=halo-pendants" },
+  { id: "music", label: "Music", href: "/collections?category=pendants&subcategory=music-pendants" },
+  { id: "wild-life", label: "Wild Life", href: "/collections?category=pendants&subcategory=wild-life-pendants" },
+  { id: "infinity", label: "Infinity", href: "/collections?category=pendants&subcategory=infinity-pendants" },
+  { id: "spot", label: "Spot", href: "/collections?category=pendants&subcategory=spot-pendants" },
+  { id: "plain-gold", label: "Plain Gold", href: "/collections?category=pendants&subcategory=plain-gold-pendants" },
+  { id: "patriotic-jewelry", label: "Patriotic Jewelry", href: "/collections?category=pendants&subcategory=patriotic-jewlery-pendants" },
+  { id: "fathers-day", label: "Father's Day", href: "/collections?category=pendants&subcategory=fathers-day-pendants" },
+  { id: "mom", label: "Mom", href: "/collections?category=pendants&subcategory=mom-pendants" },
+  { id: "religious", label: "Religious", href: "/collections?category=pendants&subcategory=religious-pendants" },
+  { id: "egyptian-pieces", label: "Egyptian Pieces", href: "/collections?category=pendants&subcategory=egyptian-pieces-pendants" },
+  { id: "statement", label: "Statement", href: "/collections?category=pendants&subcategory=statement-pendants" },
 ]
 
 const CHAINS_COLLECTIONS: Collection[] = [
-  { id: "snakes", label: "Snakes", href: "/collections?category=chains&subcategory=snake" },
-  { id: "miami-cuban-chains", label: "Miami Cuban Chains", href: "/collections?category=chains&subcategory=miami-cubian-chain" },
+  { id: "snakes", label: "Snakes", href: "/collections?category=chains&subcategory=snake-chains" },
+  { id: "miami-cuban-chains", label: "Miami Cuban Chains", href: "/collections?category=chains&subcategory=miami-cubian-chains" },
   { id: "rope-chains", label: "Rope Chains", href: "/collections?category=chains&subcategory=rope-chains" },
-  { id: "plain-gold", label: "Plain Gold", href: "/collections?category=chains&subcategory=plain-gold-chain" },
+  { id: "plain-gold", label: "Plain Gold", href: "/collections?category=chains&subcategory=plain-gold-chains" },
 ]
 
 const RINGS_COLLECTIONS: Collection[] = [
   { id: "solitaire", label: "Solitaire", href: "/collections?category=rings&subcategory=solitaire-rings" },
   { id: "promise-rings", label: "Promise Rings", href: "/collections?category=rings&subcategory=promise-rings" },
   { id: "mens-rings", label: "Men's Rings", href: "/collections?category=rings&subcategory=mens-rings" },
-  { id: "engagement-rings", label: "Engagement", href: "/collections?category=rings&subcategory=engagement" },
+  { id: "engagement-rings", label: "Engagement", href: "/collections?category=rings&subcategory=engagement-rings" },
   { id: "bridal-sets", label: "Bridal Sets", href: "/collections?category=rings&subcategory=bridal-sets" },
-  { id: "wedding-bands", label: "Wedding Bands", href: "/collections?category=rings&subcategory=wedding-bands" },
-  { id: "plain-gold-rings", label: "Plain Gold Rings", href: "/collections?category=rings&subcategory=plain-gold" },
-  { id: "stackable-rings", label: "Stackable", href: "/collections?category=rings&subcategory=stackable" },
-  { id: "eternity-rings", label: "Etrnity", href: "/collections?category=rings&subcategory=eternity" },
+  { id: "wedding-bands", label: "Wedding Bands", href: "/collections?category=rings&subcategory=wedding-bands-rings" },
+  { id: "plain-gold-rings", label: "Plain Gold Rings", href: "/collections?category=rings&subcategory=plain-gold-rings" },
+  { id: "stackable-rings", label: "Stackable", href: "/collections?category=rings&subcategory=stackable-rings" },
+  { id: "eternity-rings", label: "Etrnity", href: "/collections?category=rings&subcategory=eternity-rings" },
   { id: "anniversary-rings", label: "Anniversary Rings", href: "/collections?category=rings&subcategory=anniversary-rings" },
-  { id: "birthstone-rings", label: "Statement", href: "/collections?category=rings&subcategory=statement" },
-  { id: "three-stone-rings", label: "3 Stone", href: "/collections?category=rings&subcategory=three-stone" },
+  { id: "statement-rings", label: "Statement", href: "/collections?category=rings&subcategory=statement-rings" },
+  { id: "three-stone-rings", label: "3 Stone", href: "/collections?category=rings&subcategory=three-stone-rings" },
 ]
 
 const EARRINGS_COLLECTIONS: Collection[] = [
   { id: "stud-earrings", label: "Stud", href: "/collections/?category=earrings&subcategory=stud-earrings" },
-  { id: "hoops-and-huggies", label: "Hopps and Huggies", href: "/collections/?category=earrings&subcategory=hopps-and-huggies" },
-  { id: "drop-and-dangle-earrings", label: "Drop And Dangles", href: "/collections/?category=earrings&subcategory=drops-and-dangles" },
+  { id: "hoops-and-huggies", label: "Hopps and Huggies", href: "/collections/?category=earrings&subcategory=hopps-and-huggies-earrings" },
+  { id: "drop-and-dangle-earrings", label: "Drop And Dangles", href: "/collections/?category=earrings&subcategory=drops-and-dangles-earrings" },
   { id: "plain-gold-earrings", label: "Plain Gold", href: "/collections/?category=earrings&subcategory=plain-gold-earrings" },
   { id: "halo-earrings", label: "Halo", href: "/collections/?category=earrings&subcategory=halo-earrings" },
   { id: "solitaire-earrings", label: "Solitaire", href: "/collections/?category=earrings&subcategory=solitaire-earrings" },
-  { id: "patriotic-jewelry", label: "Patriotic Jewelry", href: "/collections/?category=earrings&subcategory=patriotic" },
+  { id: "patriotic-jewelry", label: "Patriotic Jewelry", href: "/collections/?category=earrings&subcategory=patriotic-earrings" },
 ]
 
 const PENDANTS_MENU: MegaMenuObject = {

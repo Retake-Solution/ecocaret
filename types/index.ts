@@ -35,7 +35,6 @@ export interface ApiProduct {
   tags?: string[];
   stoneType: string;
   totalStoneCaratWeight?: number;
-  displayPrice?: number;
   discountPercent?: number;
   makingChargeUSD?: number;
   isActive?: boolean;

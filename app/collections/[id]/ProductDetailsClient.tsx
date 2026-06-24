@@ -81,8 +81,6 @@ const getProductPrice = (
   purity?: string,
   metalColor?: string
 ) => {
-  if (typeof product.displayPrice === "number") return product.displayPrice;
-
   const activeMetalOptions = getAvailableMetalOptions(product);
   const metalOption =
     activeMetalOptions.find(

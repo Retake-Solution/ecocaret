@@ -95,8 +95,6 @@ const getProductImage = (product: ApiProduct) => {
 };
 
 const getProductPrice = (product: ApiProduct) => {
-  if (typeof product.displayPrice === "number") return product.displayPrice;
-
   const activeMetalOption = product.metalOptions?.find((option) => option.isActive);
   const metalWeight =
     product.sizeMatrix
@@ -342,7 +340,6 @@ function CollectionsList({
     };
   }, [filters]);
 
-  const sortedProducts = products;
   const currentPage = filters.page || 1;
   const hasNextPage = currentPage * (filters.limit || 20) < totalProducts;
 
@@ -532,7 +529,7 @@ function CollectionsList({
             <div className="min-w-0">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <p className="text-label-sm text-on-surface-variant">
-                  Showing {sortedProducts.length} of {totalProducts} products
+                  Showing {products.length} of {totalProducts} products
                 </p>
                 <p className="text-label-sm text-on-surface-variant">
                   Page {currentPage}
@@ -548,7 +545,7 @@ function CollectionsList({
                     Loading Masterpieces
                   </p>
                 </div>
-              ) : sortedProducts.length === 0 ? (
+              ) : products.length === 0 ? (
                 <div className="h-[400px] flex flex-col items-center justify-center text-center space-y-4">
                   <span className="material-symbols-outlined text-outline-variant text-6xl">
                     diamond
@@ -562,7 +559,7 @@ function CollectionsList({
                   className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-gutter"
                   id="product-grid"
                 >
-                  {sortedProducts.map((product, index) => {
+                  {products.map((product, index) => {
                     const productName = getProductName(product);
                     const productImage = getProductImage(product);
                     const price = getProductPrice(product);

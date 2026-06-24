@@ -78,7 +78,7 @@ Deprecated product fields such as `metal`, `specifications`, `sizes`, `jewelryTy
 
 ## Product Pricing
 
-Collection and detail pages calculate a fallback product price when `displayPrice` is not provided.
+Collection and detail pages calculate product prices from the product's stone, metal, making charge, and discount data.
 
 The implemented formula is:
 
