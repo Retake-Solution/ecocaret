@@ -36,7 +36,7 @@ const toQueryParams = (filters?: ProductFilters) => {
 
 export const fetchProductList = async (filters?: ProductFilters): Promise<ProductListResult> => {
   try {
-    const response = await apiClient.get('/products', {
+    const response = await apiClient.get('/api/v1/products', {
       params: toQueryParams(filters),
     });
     const json = response.data;
@@ -80,7 +80,7 @@ export const fetchProducts = async (filters?: ProductFilters): Promise<ApiProduc
 
 export const fetchProductById = async (id: string): Promise<ApiProduct | null> => {
   try {
-    const response = await apiClient.get(`/products/${id}`);
+    const response = await apiClient.get(`/api/v1/products/${id}`);
     const json = response.data;
     if (json.success && json.data) {
       return json.data;
