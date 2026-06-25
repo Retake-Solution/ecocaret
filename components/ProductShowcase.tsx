@@ -41,7 +41,7 @@ const products: Product[] = [
 
 export default function ProductShowcase() {
   return (
-    <section id="collections" className="py-20 md:py-28 px-margin-mobile md:px-margin-desktop bg-surface">
+    <section id="collections" className="hidden md:block py-20 md:py-28 px-margin-mobile md:px-margin-desktop bg-surface">
       <div className="max-w-container-max mx-auto">
         {/* Title Area */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-14 gap-6">

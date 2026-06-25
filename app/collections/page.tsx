@@ -269,8 +269,6 @@ function CollectionsList({
     category: initialCategory,
     subCategory: initialSubCategory,
   }));
-  const [filtersOpen, setFiltersOpen] = useState(false);
-
   // Navigation glassmorphism on scroll
   useEffect(() => {
     const handleScroll = () => {
@@ -285,8 +283,6 @@ function CollectionsList({
   }, []);
 
   const [products, setProducts] = useState<ApiProduct[]>([]);
-  const [categoryOptions, setCategoryOptions] = useState<FilterOption[]>([]);
-  const [subCategoryOptions, setSubCategoryOptions] = useState<FilterOption[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -298,14 +294,6 @@ function CollectionsList({
     }));
   };
 
-  const resetFilters = () => {
-    setFilters({
-      ...defaultFilters,
-      category: initialCategory,
-      subCategory: initialSubCategory,
-    });
-  };
-
   useEffect(() => {
     let isMounted = true;
 
@@ -314,22 +302,6 @@ function CollectionsList({
       const fetchedProducts = await fetchProductList(buildApiFilters(filters));
       if (isMounted) {
         setProducts(fetchedProducts.products);
-        setCategoryOptions((current) =>
-          mergeFilterOptions(
-            current,
-            fetchedProducts.products
-              .map((product) => getTaxonomyFilterOption(product.category))
-              .filter((option): option is LabeledFilterOption => Boolean(option))
-          )
-        );
-        setSubCategoryOptions((current) =>
-          mergeFilterOptions(
-            current,
-            fetchedProducts.products
-              .map((product) => getTaxonomyFilterOption(product.subCategory))
-              .filter((option): option is LabeledFilterOption => Boolean(option))
-          )
-        );
         setTotalProducts(fetchedProducts.total);
         setIsLoading(false);
       }
@@ -363,171 +335,11 @@ function CollectionsList({
               <h1 className="font-display-lg text-headline-lg text-on-surface leading-tight">
                 Curated Collections
               </h1>
-              <p className="text-on-surface-variant font-body-md mt-2 max-w-xl">
-                Masterpieces forged in sustainability. Every diamond tells a story
-                of ethical luxury and precision craftsmanship.
-              </p>
             </div>
           </header>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
-            <aside className="lg:sticky lg:top-32 lg:self-start">
-              <button
-                type="button"
-                onClick={() => setFiltersOpen((open) => !open)}
-                className="mb-3 flex w-full items-center justify-between rounded-xl border border-outline-variant/40 bg-surface-bright px-4 py-3 text-left lg:hidden"
-              >
-                <span className="text-[11px] font-bold uppercase tracking-widest text-on-surface">
-                  Filter Collection
-                </span>
-                <span className="material-symbols-outlined text-primary">
-                  {filtersOpen ? "close" : "menu"}
-                </span>
-              </button>
-              <section className={`${filtersOpen ? "block" : "hidden"} rounded-xl border border-outline-variant/30 bg-surface-bright p-3 md:p-4 lg:block`}>
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-[11px] font-bold uppercase tracking-widest text-on-surface">
-                    Filter Collection
-                  </h2>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={resetFilters}
-                      className="rounded-full border border-outline-variant/50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
-                    >
-                      Reset
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3">
-                  <SelectFilter
-                    label="Category"
-                    value={filters.category}
-                    options={categoryOptions}
-                    onChange={(value) => updateFilter("category", value)}
-                  />
-                  <SelectFilter
-                    label="Metal Type"
-                    value={filters.metalType}
-                    options={filterOptions.metalType}
-                    onChange={(value) => updateFilter("metalType", value)}
-                  />
-                  <SelectFilter
-                    label="Metal Color"
-                    value={filters.metalColor}
-                    options={filterOptions.metalColor}
-                    onChange={(value) => updateFilter("metalColor", value)}
-                  />
-                  <SelectFilter
-                    label="Purity"
-                    value={filters.purity}
-                    options={filterOptions.purity}
-                    onChange={(value) => updateFilter("purity", value)}
-                  />
-                  <SelectFilter
-                    label="Stone Type"
-                    value={filters.stoneType}
-                    options={filterOptions.stoneType}
-                    onChange={(value) => updateFilter("stoneType", value)}
-                  />
-                  <SelectFilter
-                    label="Sort"
-                    value={filters.sort}
-                    options={filterOptions.sort}
-                    onChange={(value) => updateFilter("sort", value)}
-                  />
-                </div>
-
-                <details className="mt-3 rounded-lg border border-outline-variant/30 bg-surface-container-lowest/60">
-                  <summary className="cursor-pointer px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-                    More Filters
-                  </summary>
-                  <div className="grid grid-cols-1 gap-3 border-t border-outline-variant/30 p-3">
-                    <SelectFilter
-                      label="Sub Category"
-                      value={filters.subCategory}
-                      options={subCategoryOptions}
-                      onChange={(value) => updateFilter("subCategory", value)}
-                    />
-                    <TextFilter
-                      label="Collection"
-                      value={filters.collection}
-                      placeholder="solitaire"
-                      onChange={(value) => updateFilter("collection", value)}
-                    />
-                    <SelectFilter
-                      label="Gender"
-                      value={filters.gender}
-                      options={filterOptions.gender}
-                      onChange={(value) => updateFilter("gender", value)}
-                    />
-                    <TextFilter
-                      label="Shape"
-                      value={filters.shape}
-                      placeholder="emerald"
-                      onChange={(value) => updateFilter("shape", value)}
-                    />
-                    <TextFilter
-                      label="Min Price"
-                      value={filters.minPrice}
-                      placeholder="500"
-                      type="number"
-                      onChange={(value) => updateFilter("minPrice", value)}
-                    />
-                    <TextFilter
-                      label="Max Price"
-                      value={filters.maxPrice}
-                      placeholder="2000"
-                      type="number"
-                      onChange={(value) => updateFilter("maxPrice", value)}
-                    />
-                  </div>
-                </details>
-
-                <div className="mt-3 flex flex-col gap-3 border-t border-outline-variant/30 pt-3">
-                  <label className="flex w-full flex-col gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-                      Limit
-                    </span>
-                    <select
-                      value={filters.limit || 20}
-                      onChange={(event) => updateFilter("limit", Number(event.target.value))}
-                      className="h-11 rounded-lg border border-outline-variant/50 bg-surface-container-lowest px-3 text-label-sm text-on-surface outline-none transition-colors focus:border-primary"
-                    >
-                      {filterOptions.limit.map((limit) => (
-                        <option key={limit} value={limit}>
-                          {limit} products
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <div className="flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      disabled={currentPage <= 1 || isLoading}
-                      onClick={() => updateFilter("page", Math.max(currentPage - 1, 1))}
-                      className="rounded-lg border border-outline-variant/50 px-4 py-2 text-label-sm font-bold text-on-surface transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:not-disabled:border-primary hover:not-disabled:text-primary"
-                    >
-                      Previous
-                    </button>
-                    <span className="text-label-sm text-on-surface-variant">
-                      Page {currentPage}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={!hasNextPage || isLoading}
-                      onClick={() => updateFilter("page", currentPage + 1)}
-                      className="rounded-lg border border-outline-variant/50 px-4 py-2 text-label-sm font-bold text-on-surface transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:not-disabled:border-primary hover:not-disabled:text-primary"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              </section>
-            </aside>
-
-            <div className="min-w-0">
+          <div className="w-full">
+            <div className="w-full">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <p className="text-label-sm text-on-surface-variant">
                   Showing {products.length} of {totalProducts} products
@@ -556,10 +368,11 @@ function CollectionsList({
                   </p>
                 </div>
               ) : (
-                <div
-                  className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-gutter"
-                  id="product-grid"
-                >
+                <>
+                  <div
+                    className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-gutter"
+                    id="product-grid"
+                  >
                   {products.map((product, index) => {
                     const productName = getProductName(product);
                     const productImage = getProductImage(product);
@@ -653,6 +466,48 @@ function CollectionsList({
                     );
                   })}
                 </div>
+
+                {/* Pagination Controls */}
+                <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-outline-variant/20 pt-8">
+                  <div className="flex items-center gap-4">
+                    <button
+                      type="button"
+                      disabled={currentPage <= 1 || isLoading}
+                      onClick={() => updateFilter("page", Math.max(currentPage - 1, 1))}
+                      className="rounded-xl border border-outline-variant/40 px-6 py-2.5 text-label-sm font-bold text-on-surface hover:bg-surface-container-low hover:border-primary/50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-label-sm text-on-surface-variant font-medium">
+                      Page {currentPage}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={!hasNextPage || isLoading}
+                      onClick={() => updateFilter("page", currentPage + 1)}
+                      className="rounded-xl border border-outline-variant/40 px-6 py-2.5 text-label-sm font-bold text-on-surface hover:bg-surface-container-low hover:border-primary/50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                  <label className="flex items-center gap-3">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                      Show
+                    </span>
+                    <select
+                      value={filters.limit || 20}
+                      onChange={(event) => updateFilter("limit", Number(event.target.value))}
+                      className="h-10 rounded-lg border border-outline-variant/40 bg-surface-container-lowest px-3 text-label-sm text-on-surface outline-none transition-colors focus:border-primary cursor-pointer"
+                    >
+                      {filterOptions.limit.map((limit) => (
+                        <option key={limit} value={limit}>
+                          {limit} products
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                </>
               )}
             </div>
           </div>
