@@ -263,7 +263,6 @@ body {
   border-radius: 2px;
 }
 
-/* Hide scrollbar for Chrome, Safari and Opera */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

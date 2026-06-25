@@ -73,7 +73,7 @@ export default function Hero() {
         </div>
 
         {/* Right Visual Showcase Column */}
-        <div className="lg:col-span-6 relative flex justify-center lg:justify-end pr-4">
+        <div className="hidden lg:flex lg:col-span-6 relative justify-center lg:justify-end pr-4">
           {/* Main Visual Image Frame */}
           <div className="relative w-[85%] sm:w-[75%] lg:w-[80%] aspect-[4/5] bg-surface-container-high overflow-hidden rounded-[3rem] border border-outline-variant/20 shadow-xl transition-all duration-700 hover:shadow-2xl">
             <img
