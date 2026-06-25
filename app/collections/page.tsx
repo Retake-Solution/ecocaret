@@ -340,15 +340,6 @@ function CollectionsList({
 
           <div className="w-full">
             <div className="w-full">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <p className="text-label-sm text-on-surface-variant">
-                  Showing {products.length} of {totalProducts} products
-                </p>
-                <p className="text-label-sm text-on-surface-variant">
-                  Page {currentPage}
-                </p>
-              </div>
-
               {isLoading ? (
                 <div className="h-[400px] flex flex-col items-center justify-center text-center space-y-4">
                   <span className="material-symbols-outlined text-outline-variant text-6xl animate-pulse">

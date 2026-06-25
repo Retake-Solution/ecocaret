@@ -151,6 +151,51 @@ const NECKLACE_MENU: MegaMenuObject = {
   "Shop By Metal": SHOP_BY_METAL_SECTION,
 }
 
+const MEGA_MENU_FEATURES = {
+  pendants: {
+    image: "https://lh3.googleusercontent.com/aida/AP1WRLsvk8wW-v6NGesvrahUuVR8eohLUVJKTpCPWbK5cY9UhmGg8OD46eJ60ess0iUTpY7IVZ9JjGyBGIMLbKknNvnjiTZ06nTCCIQRPRdYhm9-AGE7QNExFXI9Sui3EpPKRvOxxWT7S5YNWkl2ShnmnnGXUzlwRGd31PhijpmiXMUlRk3QacCvpz7AwsBLPlvaPuEvWPwnn1vQtPTmy5dsOEPPXGuLXmvCXX8n1Xbzy6RrbNtxc9ii1c0uOTo",
+    tag: "Spotlight",
+    title: "Signature Solitaires",
+    desc: "Captured light in motion, grown under pure atmospheric heat.",
+    href: "/collections?category=pendants&subcategory=solitaire-pendants"
+  },
+  chains: {
+    image: "https://lh3.googleusercontent.com/aida/AP1WRLsvk8wW-v6NGesvrahUuVR8eohLUVJKTpCPWbK5cY9UhmGg8OD46eJ60ess0iUTpY7IVZ9JjGyBGIMLbKknNvnjiTZ06nTCCIQRPRdYhm9-AGE7QNExFXI9Sui3EpPKRvOxxWT7S5YNWkl2ShnmnnGXUzlwRGd31PhijpmiXMUlRk3QacCvpz7AwsBLPlvaPuEvWPwnn1vQtPTmy5dsOEPPXGuLXmvCXX8n1Xbzy6RrbNtxc9ii1c0uOTo",
+    tag: "New Era",
+    title: "Atelier Miami Cuban",
+    desc: "The weight of master heritage, hand-forged in recycled gold.",
+    href: "/collections?category=chains"
+  },
+  rings: {
+    image: "https://lh3.googleusercontent.com/aida/AP1WRLt0zyESo6pHkVilif4cjlRYBG-P06jrYSEWGr9H_UtHY8zLNEVfPRPINOhbApKi40CG9gcZs6LzfaanB_f0PtWX4y3gmpVnR-cSyLpL3PufPtmHnj2fGf9wC-f2peHAJyNr36TiXH-n-q4cgW6U9TxcEPi3E-78gDneVnjP6SPAn8UAPURBbSEHcc_M_4dCpagmbN23JS5jzMqqjNxj3k7LIRSeFxSkK7BcaeOXshq8JoBtX4Wd_n8lSNw",
+    tag: "Engagement",
+    title: "The Promise Series",
+    desc: "Molecular carbon purity, certified for a lifetime of devotion.",
+    href: "/collections?category=rings&subcategory=solitaire-rings"
+  },
+  earrings: {
+    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDzzmq3JexhIO7YpZClTn2dZgaKmzZLA-d_J4uHyuEGx5Gs0gjAR-ReY_D-DtMsYkXP2eKvsP9gj5_D9dq7IPGQf56dg3tHPu86lqun_wyQr_oMjqt77wXTsLPKC5cXroZT1H3ryKU6zQcEyLqIdA6m6In0OkrVS3C7GBakrzfp8PLQExpvSE-CIAcOcMv17ybWiQZ3XRtifQS8MOPrsxi-_oN6A9FwQAcq5PXx8ZNmGugUYrE7HyfWWDpTQXwFKPN2VUoeiyysI0w",
+    tag: "Atelier Studs",
+    title: "Minimalist Geometry",
+    desc: "Four-claw classic structures designed for pure light reflection.",
+    href: "/collections?category=earrings&subcategory=stud-earrings"
+  },
+  bracelets: {
+    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCtEGLDC-9MkDh8yRjviZ1ykmGePsNTLJLmZ76TAz9HqAk3gwEAlFqVhHeqwVNFpS5_OhhFj5yb-cyXh5vbaItkpac9yF6K8p8nkDuVFbhlJMPyWr4IGxPSWCN0xy2zwba1QmmgE_NUy-dKRPNygm2a8X_pvQu921TbA59g8ew6DYiRQGcnbx6p0KkIFL4bJh1NMCAII8Oi29UABapAFFrSV9Aw_mZJmwnHxxBmGFIUAaba1ULLquAN0CAbbpG93vifSvPkNGcwoIQ",
+    tag: "Sovereignty",
+    title: "Atelier Bangles",
+    desc: "Circlets of ethical white gold, fluid structure, unmatched comfort.",
+    href: "/collections?category=bracelets"
+  },
+  necklaces: {
+    image: "https://lh3.googleusercontent.com/aida/AP1WRLsvk8wW-v6NGesvrahUuVR8eohLUVJKTpCPWbK5cY9UhmGg8OD46eJ60ess0iUTpY7IVZ9JjGyBGIMLbKknNvnjiTZ06nTCCIQRPRdYhm9-AGE7QNExFXI9Sui3EpPKRvOxxWT7S5YNWkl2ShnmnnGXUzlwRGd31PhijpmiXMUlRk3QacCvpz7AwsBLPlvaPuEvWPwnn1vQtPTmy5dsOEPPXGuLXmvCXX8n1Xbzy6RrbNtxc9ii1c0uOTo",
+    tag: "Masterpiece",
+    title: "Recycled Tennis Collar",
+    desc: "A seamless cascade of brilliant-cut diamonds without earth impact.",
+    href: "/collections?category=necklaces"
+  }
+} as const;
+
 export default function Header({
   scrolled,
   setCartOpen,
@@ -163,197 +208,392 @@ export default function Header({
   const renderMobileMenu = () => {
     return (
       <div
-        className={`fixed inset-0 z-[200] bg-surface/95 backdrop-blur-xl flex flex-col md:hidden transition-all duration-500 ease-in-out ${mobileMenuOpen ? "opacity-100 translate-x-0" : "opacity-0 translate-x-12 pointer-events-none"
-          }`}
+        className={`fixed inset-0 z-[200] bg-black/40 backdrop-blur-sm md:hidden transition-opacity duration-500 ${
+          mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setMobileMenuOpen(false)}
       >
-        <div className="flex justify-between items-center px-margin-mobile py-4 border-b border-outline-variant/20 h-20">
-          <Link
-            href="/"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{ color: THEME_COLORS.global.primary }}
-            className="font-display-lg text-headline-md tracking-tighter cursor-pointer"
-          >
-            Eco Caret
-          </Link>
-          <button
-            onClick={() => setMobileMenuOpen(false)}
-            className="material-symbols-outlined p-2 hover:bg-primary/10 rounded-full transition-colors"
-            style={{ color: THEME_COLORS.global.primary }}
-          >
-            close
-          </button>
-        </div>
-        <div className="flex flex-col p-margin-mobile gap-8 font-body-md text-headline-sm overflow-y-auto mt-4">
-          <Link onClick={() => setMobileMenuOpen(false)} className="text-on-surface hover:text-primary transition-colors" href="/collections">Collections</Link>
-          <Link onClick={() => setMobileMenuOpen(false)} className="text-on-surface hover:text-primary transition-colors" href="/collections">Pendants</Link>
-          <Link onClick={() => setMobileMenuOpen(false)} className="text-on-surface hover:text-primary transition-colors" href="/collections">Chains</Link>
-          <Link onClick={() => setMobileMenuOpen(false)} className="text-on-surface hover:text-primary transition-colors" href="/collections">Rings</Link>
-          <Link onClick={() => setMobileMenuOpen(false)} className="text-on-surface hover:text-primary transition-colors" href="/collections">Earrings</Link>
-          <Link onClick={() => setMobileMenuOpen(false)} className="text-on-surface hover:text-primary transition-colors" href="/collections">Bracelets</Link>
-          <Link onClick={() => setMobileMenuOpen(false)} className="text-on-surface hover:text-primary transition-colors" href="/collections">Necklaces</Link>
-          <Link onClick={() => setMobileMenuOpen(false)} className="text-on-surface hover:text-primary transition-colors" href="/our-story">Our Story</Link>
-          <Link onClick={() => setMobileMenuOpen(false)} className="text-on-surface hover:text-primary transition-colors" href="/custom">Custom</Link>
-          {user && <Link onClick={() => setMobileMenuOpen(false)} className="text-on-surface hover:text-primary transition-colors" href="/orders">Order History</Link>}
-          <Link onClick={() => setMobileMenuOpen(false)} className="text-on-surface hover:text-primary transition-colors" href="/#atelier">Heritage</Link>
-          <div className="mt-8 border-t border-outline-variant/20 pt-8 flex gap-6">
-            <Link href="/collections?consultation=true" onClick={() => setMobileMenuOpen(false)} className="bg-primary text-on-primary px-8 py-3 rounded-full font-label-md text-label-md hover:bg-primary-container transition-colors text-center w-full shadow-md">
-              Book Consultation
-            </Link>
+        <div
+          className={`absolute right-0 top-0 h-full w-[85vw] max-w-[400px] bg-background shadow-2xl flex flex-col z-[210] transition-transform duration-500 ease-in-out ${
+            mobileMenuOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex justify-between items-center px-6 py-4 border-b border-outline-variant/20 h-20">
+            <span className="font-[family:var(--font-playfair-display)] text-headline-sm font-semibold tracking-tighter text-primary">
+              Eco Caret
+            </span>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="material-symbols-outlined p-2 hover:bg-primary/10 rounded-full transition-colors cursor-pointer"
+            >
+              close
+            </button>
           </div>
-        </div>
-      </div>
-    )
-  }
 
+          {/* Body */}
+          <div className="flex-grow overflow-y-auto px-6 py-6 space-y-6">
+            {/* Category Accordions */}
+            <div className="space-y-4">
+              <span className="text-[10px] font-bold tracking-widest text-on-surface-variant/40 uppercase">
+                Categories
+              </span>
+              
+              {/* Accordion 1: Pendants */}
+              <details className="group/accordion border-b border-outline-variant/15 pb-3">
+                <summary className="list-none flex items-center justify-between font-label-md text-on-surface font-semibold cursor-pointer py-1.5">
+                  <span>Pendants</span>
+                  <span className="material-symbols-outlined text-sm transition-transform duration-300 group-open/accordion:rotate-180">
+                    expand_more
+                  </span>
+                </summary>
+                <div className="pt-2 pl-4 space-y-2 flex flex-col text-body-sm text-on-surface-variant">
+                  <Link onClick={() => setMobileMenuOpen(false)} href="/collections?category=pendants">All Pendants</Link>
+                  {PENDANTS_COLLECTIONS.slice(0, 5).map((x) => (
+                    <Link key={x.id} onClick={() => setMobileMenuOpen(false)} href={x.href}>{x.label}</Link>
+                  ))}
+                </div>
+              </details>
 
-  const renderDynamicMegaMenu = (menuObject: MegaMenuObject) => {
-    return (
-      <div className="absolute left-0 top-full w-full bg-surface-bright/90 backdrop-blur-xl border-b border-outline-variant/20 shadow-xl transition-all duration-300 z-40 opacity-0 invisible group-hover:opacity-100 group-hover:visible transform -translate-y-2 group-hover:translate-y-0 pointer-events-none group-hover:pointer-events-auto">
-        <div className="max-w-container-max mx-auto px-margin-desktop py-12">
-          <div className="grid grid-cols-4 gap-12">
-            {/* Column 1: Shop By Collection */}
-            <div className="space-y-6">
-              <h3 className="font-headline-sm text-label-md uppercase tracking-widest text-secondary">Shop By Collection</h3>
-              <ul className="space-y-4 max-h-[60vh] flex flex-col flex-wrap gap-x-8">
-                {menuObject['Shop By Collection'].map((x) => {
-                  return (
-                    <li key={x.id}><Link href={x.href}> {x.label}</Link></li>
-                  )
-                })}
-              </ul>
+              {/* Accordion 2: Rings */}
+              <details className="group/accordion border-b border-outline-variant/15 pb-3">
+                <summary className="list-none flex items-center justify-between font-label-md text-on-surface font-semibold cursor-pointer py-1.5">
+                  <span>Rings</span>
+                  <span className="material-symbols-outlined text-sm transition-transform duration-300 group-open/accordion:rotate-180">
+                    expand_more
+                  </span>
+                </summary>
+                <div className="pt-2 pl-4 space-y-2 flex flex-col text-body-sm text-on-surface-variant">
+                  <Link onClick={() => setMobileMenuOpen(false)} href="/collections?category=rings">All Rings</Link>
+                  {RINGS_COLLECTIONS.slice(0, 5).map((x) => (
+                    <Link key={x.id} onClick={() => setMobileMenuOpen(false)} href={x.href}>{x.label}</Link>
+                  ))}
+                </div>
+              </details>
+
+              {/* Accordion 3: Earrings */}
+              <details className="group/accordion border-b border-outline-variant/15 pb-3">
+                <summary className="list-none flex items-center justify-between font-label-md text-on-surface font-semibold cursor-pointer py-1.5">
+                  <span>Earrings</span>
+                  <span className="material-symbols-outlined text-sm transition-transform duration-300 group-open/accordion:rotate-180">
+                    expand_more
+                  </span>
+                </summary>
+                <div className="pt-2 pl-4 space-y-2 flex flex-col text-body-sm text-on-surface-variant">
+                  <Link onClick={() => setMobileMenuOpen(false)} href="/collections?category=earrings">All Earrings</Link>
+                  {EARRINGS_COLLECTIONS.slice(0, 5).map((x) => (
+                    <Link key={x.id} onClick={() => setMobileMenuOpen(false)} href={x.href}>{x.label}</Link>
+                  ))}
+                </div>
+              </details>
+
+              {/* Accordion 4: Necklaces & Chains */}
+              <details className="group/accordion border-b border-outline-variant/15 pb-3">
+                <summary className="list-none flex items-center justify-between font-label-md text-on-surface font-semibold cursor-pointer py-1.5">
+                  <span>Necklaces & Chains</span>
+                  <span className="material-symbols-outlined text-sm transition-transform duration-300 group-open/accordion:rotate-180">
+                    expand_more
+                  </span>
+                </summary>
+                <div className="pt-2 pl-4 space-y-2 flex flex-col text-body-sm text-on-surface-variant">
+                  <Link onClick={() => setMobileMenuOpen(false)} href="/collections?category=necklaces">All Necklaces</Link>
+                  {NECKLACES_COLLECTIONS.map((x) => (
+                    <Link key={x.id} onClick={() => setMobileMenuOpen(false)} href={x.href}>{x.label}</Link>
+                  ))}
+                  <Link onClick={() => setMobileMenuOpen(false)} href="/collections?category=chains">All Chains</Link>
+                  {CHAINS_COLLECTIONS.map((x) => (
+                    <Link key={x.id} onClick={() => setMobileMenuOpen(false)} href={x.href}>{x.label}</Link>
+                  ))}
+                </div>
+              </details>
+
+              {/* Accordion 5: Bracelets */}
+              <details className="group/accordion border-b border-outline-variant/15 pb-3">
+                <summary className="list-none flex items-center justify-between font-label-md text-on-surface font-semibold cursor-pointer py-1.5">
+                  <span>Bracelets</span>
+                  <span className="material-symbols-outlined text-sm transition-transform duration-300 group-open/accordion:rotate-180">
+                    expand_more
+                  </span>
+                </summary>
+                <div className="pt-2 pl-4 space-y-2 flex flex-col text-body-sm text-on-surface-variant">
+                  <Link onClick={() => setMobileMenuOpen(false)} href="/collections?category=bracelets">All Bracelets</Link>
+                  {BRACELET_COLLECTIONS.map((x) => (
+                    <Link key={x.id} onClick={() => setMobileMenuOpen(false)} href={x.href}>{x.label}</Link>
+                  ))}
+                </div>
+              </details>
             </div>
 
-            {/* Column 2: Shop By Shape */}
-            {Object.values(menuObject['Shop By Shape']).length > 0 && <div className="space-y-6">
-              <h3 className="font-headline-sm text-label-md uppercase tracking-widest text-secondary">Shop By Shape</h3>
-              <ul className="space-y-4">
-                {menuObject['Shop By Shape'].map((x) => {
-                  return (
-                    <li key={x.id}><Link href={x.href}> {x.label}</Link></li>
-                  )
-                })}
-              </ul>
-            </div>}
+            {/* Direct Links */}
+            <div className="space-y-4">
+              <span className="text-[10px] font-bold tracking-widest text-on-surface-variant/40 uppercase">
+                Explore
+              </span>
+              <div className="flex flex-col gap-4 font-label-md text-on-surface font-semibold pl-1">
+                <Link onClick={() => setMobileMenuOpen(false)} className="hover:text-primary transition-colors" href="/collections">All Collections</Link>
+                <Link onClick={() => setMobileMenuOpen(false)} className="hover:text-primary transition-colors" href="/custom">Custom Atelier</Link>
+                {user && (
+                  <Link onClick={() => setMobileMenuOpen(false)} className="hover:text-primary transition-colors" href="/orders">Order History</Link>
+                )}
 
-            {/* Column 2: Shop By Gender */}
-            {Object.values(menuObject['Shop By Gender']).length > 0 && <div className="space-y-6">
-              <h3 className="font-headline-sm text-label-md uppercase tracking-widest text-secondary">Shop By Gender</h3>
-              <ul className="space-y-4">
-                {menuObject['Shop By Gender'].map((x) => {
-                  return (
-                    <li key={x.id}><Link href={x.href}> {x.label}</Link></li>
-                  )
-                })}
-              </ul>
-            </div>}
+                <Link onClick={() => setMobileMenuOpen(false)} className="hover:text-primary transition-colors" href="/#atelier">Heritage</Link>
+              </div>
+            </div>
+          </div>
 
-            {/* Column 3: Shop By Metal */}
-            {Object.values(menuObject['Shop By Metal']).length > 0 && <div className="space-y-6">
-              <h3 className="font-headline-sm text-label-md uppercase tracking-widest text-secondary">Shop By Metal</h3>
-              <ul className="space-y-4">
-                {menuObject['Shop By Metal'].map((x) => {
-                  return (
-                    <li key={x.id}><Link href={x.href}> {x.label}</Link></li>
-                  )
-                })}
-              </ul>
-            </div>}
+          {/* Footer CTA */}
+          <div className="p-6 border-t border-outline-variant/10 bg-surface-container-lowest flex flex-col gap-4">
+            <Link 
+              href="/collections?consultation=true" 
+              onClick={() => setMobileMenuOpen(false)} 
+              className="bg-primary text-on-primary py-4 rounded-full font-label-md text-label-md hover:bg-primary-container transition-all text-center font-bold tracking-wider shadow-md w-full"
+            >
+              Book Consultation
+            </Link>
+            <div className="text-center text-[10px] text-on-surface-variant/60 font-medium">
+              Eco Caret Atelier · London & Antwerp
+            </div>
           </div>
         </div>
       </div>
-    )
-  }
+    );
+  };
+
+  const renderDynamicMegaMenu = (menuObject: MegaMenuObject, categoryId: keyof typeof MEGA_MENU_FEATURES) => {
+    const feature = MEGA_MENU_FEATURES[categoryId];
+    return (
+      <div className="absolute left-0 top-full w-full bg-surface-bright/95 backdrop-blur-xl border-b border-outline-variant/15 shadow-xl transition-all duration-300 z-[150] opacity-0 invisible group-hover:opacity-100 group-hover:visible transform -translate-y-1 group-hover:translate-y-0 pointer-events-none group-hover:pointer-events-auto">
+        <div className="max-w-container-max mx-auto px-margin-desktop py-10">
+          <div className="grid grid-cols-12 gap-10">
+            {/* Category Lists (9 columns) */}
+            <div className="col-span-9 flex gap-10 border-r border-outline-variant/15 pr-8">
+              {/* Column 1: Shop By Collection */}
+              <div className={`${menuObject['Shop By Collection'].length > 6 ? "flex-[2]" : "flex-1"} space-y-4`}>
+                <h4 className="font-label-sm text-[11px] uppercase tracking-widest text-secondary font-bold">
+                  Shop By Collection
+                </h4>
+                {menuObject['Shop By Collection'].length > 6 ? (
+                  <ul className="grid grid-cols-2 gap-x-6 gap-y-3 text-body-sm">
+                    {menuObject['Shop By Collection'].map((x) => (
+                      <li key={x.id} className="hover:text-primary transition-colors">
+                        <Link href={x.href}>{x.label}</Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <ul className="space-y-3 text-body-sm">
+                    {menuObject['Shop By Collection'].map((x) => (
+                      <li key={x.id} className="hover:text-primary transition-colors">
+                        <Link href={x.href}>{x.label}</Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Column 2: Shop By Shape */}
+              {menuObject['Shop By Shape'] && menuObject['Shop By Shape'].length > 0 && (
+                <div className="flex-1 space-y-4">
+                  <h4 className="font-label-sm text-[11px] uppercase tracking-widest text-secondary font-bold">
+                    Shop By Shape
+                  </h4>
+                  <ul className="space-y-3 text-body-sm">
+                    {menuObject['Shop By Shape'].map((x) => (
+                      <li key={x.id} className="hover:text-primary transition-colors">
+                        <Link href={x.href}>{x.label}</Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Column 3: Shop By Gender / Metal */}
+              <div className="flex-1 space-y-6">
+                {menuObject['Shop By Gender'] && menuObject['Shop By Gender'].length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="font-label-sm text-[11px] uppercase tracking-widest text-secondary font-bold">
+                      Shop By Gender
+                    </h4>
+                    <ul className="space-y-3 text-body-sm">
+                      {menuObject['Shop By Gender'].map((x) => (
+                        <li key={x.id} className="hover:text-primary transition-colors">
+                          <Link href={x.href}>{x.label}</Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {menuObject['Shop By Metal'] && menuObject['Shop By Metal'].length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="font-label-sm text-[11px] uppercase tracking-widest text-secondary font-bold">
+                      Shop By Metal
+                    </h4>
+                    <ul className="space-y-3 text-body-sm">
+                      {menuObject['Shop By Metal'].map((x) => (
+                        <li key={x.id} className="hover:text-primary transition-colors">
+                          <Link href={x.href}>{x.label}</Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Editorial Feature Box (3 columns) */}
+            <div className="col-span-3">
+              <Link href={feature.href} className="group/card block space-y-4">
+                <div className="aspect-[4/3] rounded-2xl overflow-hidden border border-outline-variant/20 shadow-sm relative">
+                  <img 
+                    src={feature.image} 
+                    alt={feature.title} 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105"
+                  />
+                  <span className="absolute top-3 left-3 bg-background/85 backdrop-blur-sm text-[9px] font-bold tracking-widest uppercase text-secondary px-2.5 py-1 rounded-full border border-outline-variant/20">
+                    {feature.tag}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <h5 className="font-[family:var(--font-playfair-display)] text-lg font-semibold text-on-surface group-hover/card:text-primary transition-colors">
+                    {feature.title}
+                  </h5>
+                  <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                    {feature.desc}
+                  </p>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-secondary mt-1 group-hover/card:gap-2 transition-all">
+                    Discover Atelier →
+                  </span>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <nav
       id="top-nav"
-      className={`fixed top-0 w-full z-[100] flex justify-between items-center px-margin-mobile md:px-margin-desktop transition-all duration-300 ease-in-out ${scrolled
-        ? "h-16 bg-surface/95 backdrop-blur-md shadow-sm border-b border-outline-variant/20"
+      className={`fixed top-0 w-full z-[999] flex justify-between items-center px-margin-mobile md:px-margin-desktop transition-all duration-300 ease-in-out ${scrolled
+        ? "h-16 bg-surface/95 backdrop-blur-md shadow-sm border-b border-outline-variant/15"
         : "h-20 bg-surface border-b border-transparent"
         }`}
     >
+      <style dangerouslySetInnerHTML={{ __html: `
+        .custom-menu-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-menu-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-menu-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(133, 116, 103, 0.25);
+          border-radius: 2px;
+        }
+        .custom-menu-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(133, 116, 103, 0.45);
+        }
+      `}} />
       <Link
         href="/"
         style={{ color: THEME_COLORS.global.primary }}
-        className="font-display-lg text-headline-md lg:text-display-lg tracking-tighter cursor-pointer"
+        className="font-[family:var(--font-playfair-display)] text-headline-md lg:text-display-lg tracking-tighter cursor-pointer font-bold"
       >
         Eco Caret
       </Link>
       <div className="hidden lg:flex items-center gap-6 font-body-md text-body-md font-medium h-full">
         <div className="group h-full flex items-center">
           <Link
-            className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4"
+            className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4 relative"
             href="/collections?category=pendants"
           >
             Pendants
+            <span className="absolute bottom-3 left-0 w-full h-[2px] bg-secondary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
           </Link>
-          {renderDynamicMegaMenu(PENDANTS_MENU)}
+          {renderDynamicMegaMenu(PENDANTS_MENU, "pendants")}
         </div>
 
         <div className="group h-full flex items-center">
           <Link
-            className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4"
+            className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4 relative"
             href="/collections?category=chains"
           >
             Chains
+            <span className="absolute bottom-3 left-0 w-full h-[2px] bg-secondary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
           </Link>
-          {renderDynamicMegaMenu(CHAINS_MENU)}
+          {renderDynamicMegaMenu(CHAINS_MENU, "chains")}
         </div>
 
         <div className="group h-full flex items-center">
           <Link
-            className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4"
+            className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4 relative"
             href="/collections?category=rings"
           >
             Rings
+            <span className="absolute bottom-3 left-0 w-full h-[2px] bg-secondary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
           </Link>
-          {renderDynamicMegaMenu(RINGS_MENU)}
+          {renderDynamicMegaMenu(RINGS_MENU, "rings")}
         </div>
 
         <div className="group h-full flex items-center">
           <Link
-            className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4"
+            className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4 relative"
             href="/collections?category=earrings"
           >
             Earrings
+            <span className="absolute bottom-3 left-0 w-full h-[2px] bg-secondary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
           </Link>
-          {renderDynamicMegaMenu(EARRINGS_MENU)}
-
+          {renderDynamicMegaMenu(EARRINGS_MENU, "earrings")}
         </div>
 
         <div className="group h-full flex items-center">
           <Link
-            className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4"
+            className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4 relative"
             href="/collections?category=bracelets"
           >
             Bracelets
+            <span className="absolute bottom-3 left-0 w-full h-[2px] bg-secondary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
           </Link>
-          {renderDynamicMegaMenu(BRACELET_MENU)}
+          {renderDynamicMegaMenu(BRACELET_MENU, "bracelets")}
         </div>
+
         <div className="group h-full flex items-center">
           <Link
-            className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4"
+            className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4 relative"
             href="/collections?category=necklaces"
           >
             Necklaces
+            <span className="absolute bottom-3 left-0 w-full h-[2px] bg-secondary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
           </Link>
-          {renderDynamicMegaMenu(NECKLACE_MENU)}
+          {renderDynamicMegaMenu(NECKLACE_MENU, "necklaces")}
         </div>
-        {/* <Link
-          className="text-on-surface/80 hover:text-primary transition-colors cursor-pointer"
-          href="/custom"
-        >
-          Custom
-        </Link> */}
-        {user && (
+
+        <div className="group h-full flex items-center">
           <Link
-            className="text-on-surface/80 hover:text-primary transition-colors cursor-pointer"
-            href="/orders"
+            className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4 relative"
+            href="/custom"
           >
-            Order History
+            Custom Atelier
+            <span className="absolute bottom-3 left-0 w-full h-[2px] bg-secondary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
           </Link>
+        </div>
+
+        {user && (
+          <div className="group h-full flex items-center">
+            <Link
+              className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4 relative"
+              href="/orders"
+            >
+              Order History
+              <span className="absolute bottom-3 left-0 w-full h-[2px] bg-secondary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
+            </Link>
+          </div>
         )}
       </div>
+
       <div className="flex items-center gap-4 md:gap-6" style={{ color: THEME_COLORS.global.primary }}>
         <button
           className="md:hidden hover:bg-primary/10 transition-all duration-300 p-2 rounded-full cursor-pointer flex items-center justify-center"
@@ -363,7 +603,7 @@ export default function Header({
         </button>
         <button
           onClick={() => setCartOpen(true)}
-          className="material-symbols-outlined hover:bg-primary/10 transition-all duration-300 p-2 rounded-full cursor-pointer relative"
+          className="material-symbols-outlined hover:bg-primary/10 transition-all duration-300 p-2 rounded-full cursor-pointer relative hover:scale-105 active:scale-95 transition-transform"
         >
           shopping_bag
           {cartItemsCount > 0 && (
@@ -389,7 +629,7 @@ export default function Header({
         ) : (
           <button
             onClick={() => setProfileOpen(true)}
-            className="material-symbols-outlined hover:bg-primary/10 transition-all duration-300 p-2 rounded-full cursor-pointer"
+            className="material-symbols-outlined hover:bg-primary/10 transition-all duration-300 p-2 rounded-full cursor-pointer hover:scale-105 active:scale-95 transition-transform"
           >
             person
           </button>
