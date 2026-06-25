@@ -163,7 +163,7 @@ export default function Header({
   const renderMobileMenu = () => {
     return (
       <div
-        className={`fixed inset-0 z-[200] bg-surface/95 backdrop-blur-xl flex flex-col lg:hidden transition-all duration-500 ease-in-out ${mobileMenuOpen ? "opacity-100 translate-x-0" : "opacity-0 translate-x-12 pointer-events-none"
+        className={`fixed inset-0 z-[200] bg-surface/95 backdrop-blur-xl flex flex-col md:hidden transition-all duration-500 ease-in-out ${mobileMenuOpen ? "opacity-100 translate-x-0" : "opacity-0 translate-x-12 pointer-events-none"
           }`}
       >
         <div className="flex justify-between items-center px-margin-mobile py-4 border-b border-outline-variant/20 h-20">
@@ -356,10 +356,10 @@ export default function Header({
       </div>
       <div className="flex items-center gap-4 md:gap-6" style={{ color: THEME_COLORS.global.primary }}>
         <button
-          className="lg:hidden material-symbols-outlined hover:bg-primary/10 transition-all duration-300 p-2 rounded-full cursor-pointer"
+          className="md:hidden hover:bg-primary/10 transition-all duration-300 p-2 rounded-full cursor-pointer flex items-center justify-center"
           onClick={() => setMobileMenuOpen(true)}
         >
-          menu
+          <span className="material-symbols-outlined">menu</span>
         </button>
         <button
           onClick={() => setCartOpen(true)}
