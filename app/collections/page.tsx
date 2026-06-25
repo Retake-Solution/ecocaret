@@ -4,6 +4,7 @@ import React, { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import ProfileDialog from "@/components/ProfileDialog";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
@@ -658,29 +659,7 @@ function CollectionsList({
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="w-full py-20 bg-background border-t border-outline-variant/30 flex flex-col items-center justify-center gap-8 px-margin-desktop text-center">
-        <div className="font-display-lg text-display-lg text-primary tracking-tighter">
-          Eco Caret
-        </div>
-        <div className="flex flex-wrap justify-center gap-12 text-on-surface-variant font-body-md font-medium">
-          <a className="hover:text-primary transition-colors" href="#">
-            Privacy Policy
-          </a>
-          <a className="hover:text-primary transition-colors" href="#">
-            Ethical Sourcing
-          </a>
-          <a className="hover:text-primary transition-colors" href="#">
-            Care Guide
-          </a>
-          <a className="hover:text-primary transition-colors" href="#">
-            Contact
-          </a>
-        </div>
-        <div className="text-on-surface-variant/60 font-label-sm uppercase tracking-widest mt-4">
-          © 2026 Eco Caret. Precision Cut. Ethical Soul.
-        </div>
-      </footer>
+      <Footer />
       {/* --- PREMIUM INTERACTIVE DRAWER: SHOPPING CART --- */}
       <CartDrawer
         isOpen={cartOpen}

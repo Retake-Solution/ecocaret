@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React from "react";
 import Link from "next/link";
 
 interface Product {
@@ -39,28 +39,10 @@ const products: Product[] = [
   },
 ];
 
-interface ProductShowcaseProps {
-  onProductClick?: (product: Product) => void;
-}
-
-export default function ProductShowcase({ onProductClick }: ProductShowcaseProps = {}) {
-  const carouselRef = useRef<HTMLDivElement>(null);
-
-  const scrollLeft = () => {
-    if (carouselRef.current) {
-      carouselRef.current.scrollBy({ left: -320, behavior: "smooth" });
-    }
-  };
-
-  const scrollRight = () => {
-    if (carouselRef.current) {
-      carouselRef.current.scrollBy({ left: 320, behavior: "smooth" });
-    }
-  };
-
+export default function ProductShowcase() {
   return (
     <section id="collections" className="py-20 md:py-28 px-margin-mobile md:px-margin-desktop bg-surface">
-      <div className="max-w-container-max mx-auto relative">
+      <div className="max-w-container-max mx-auto">
         {/* Title Area */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-14 gap-6">
           <div className="max-w-xl space-y-4">
@@ -77,39 +59,18 @@ export default function ProductShowcase({ onProductClick }: ProductShowcaseProps
             </p>
           </div>
           
-          <div className="flex items-center space-x-6 shrink-0">
+          <div className="flex items-center shrink-0">
             <Link
               className="font-label-md text-label-md text-secondary border-b border-secondary/30 pb-1 hover:border-secondary transition-all font-bold tracking-wider"
               href="/collections"
             >
               View All Masterpieces
             </Link>
-            
-            {/* Carousel navigation buttons visible on mobile for swiping helper */}
-            <div className="flex space-x-2 md:hidden">
-              <button
-                onClick={scrollLeft}
-                className="w-10 h-10 rounded-full border border-outline-variant/60 flex items-center justify-center text-on-surface hover:bg-surface-container-low transition-colors"
-                title="Scroll Left"
-              >
-                <span className="material-symbols-outlined text-md">chevron_left</span>
-              </button>
-              <button
-                onClick={scrollRight}
-                className="w-10 h-10 rounded-full border border-outline-variant/60 flex items-center justify-center text-on-surface hover:bg-surface-container-low transition-colors"
-                title="Scroll Right"
-              >
-                <span className="material-symbols-outlined text-md">chevron_right</span>
-              </button>
-            </div>
           </div>
         </div>
 
-        {/* Products Grid / Horizontal Slider for Mobile */}
-        <div
-          ref={carouselRef}
-          className="flex overflow-x-auto md:grid md:grid-cols-3 gap-8 md:gap-12 pb-6 md:pb-0 snap-x snap-mandatory no-scrollbar scroll-smooth"
-        >
+        {/* Products Grid - Redesigned Asymmetric Grid without Horizontal Slider */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-12">
           {products.map((product, idx) => {
             // Asymmetrical offsets for desktop
             const offsetClass =
@@ -130,16 +91,10 @@ export default function ProductShowcase({ onProductClick }: ProductShowcaseProps
             return (
               <div
                 key={product.id}
-                className={`w-[85vw] sm:w-[50vw] md:w-auto shrink-0 snap-center md:shrink md:snap-align-none space-y-6 transition-all duration-500 hover:-translate-y-1 ${offsetClass}`}
+                className={`w-full space-y-6 transition-all duration-500 hover:-translate-y-1 ${offsetClass}`}
               >
                 <Link
-                  href={`/collections/${product.id}`}
-                  onClick={(e) => {
-                    if (onProductClick) {
-                      e.preventDefault();
-                      onProductClick(product);
-                    }
-                  }}
+                  href="/collections"
                   className="group block space-y-6"
                 >
                   {/* Image wrapper with custom shape and subtle border highlight on hover */}

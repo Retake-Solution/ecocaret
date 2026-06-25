@@ -167,14 +167,14 @@ export default function Header({
           }`}
       >
         <div className="flex justify-between items-center px-margin-mobile py-4 border-b border-outline-variant/20 h-20">
-          <a
+          <Link
             href="/"
             onClick={() => setMobileMenuOpen(false)}
             style={{ color: THEME_COLORS.global.primary }}
             className="font-display-lg text-headline-md tracking-tighter cursor-pointer"
           >
             Eco Caret
-          </a>
+          </Link>
           <button
             onClick={() => setMobileMenuOpen(false)}
             className="material-symbols-outlined p-2 hover:bg-primary/10 rounded-full transition-colors"
@@ -272,73 +272,14 @@ export default function Header({
         : "h-20 bg-surface border-b border-transparent"
         }`}
     >
-      <a
+      <Link
         href="/"
         style={{ color: THEME_COLORS.global.primary }}
         className="font-display-lg text-headline-md lg:text-display-lg tracking-tighter cursor-pointer"
       >
         Eco Caret
-      </a>
+      </Link>
       <div className="hidden lg:flex items-center gap-6 font-body-md text-body-md font-medium h-full">
-        <div className="group h-full flex items-center">
-          <a
-            className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4"
-            href="/collections"
-          >
-            Collections
-          </a>
-          <div className="absolute left-0 top-full w-full bg-surface-bright/90 backdrop-blur-xl border-b border-outline-variant/20 shadow-xl transition-all duration-300 z-40 opacity-0 invisible group-hover:opacity-100 group-hover:visible transform -translate-y-2 group-hover:translate-y-0 pointer-events-none group-hover:pointer-events-auto">
-            <div className="max-w-container-max mx-auto px-margin-desktop py-12">
-              <div className="grid grid-cols-4 gap-12">
-                {/* Column 1: Categories */}
-                <div className="space-y-6">
-                  <h3 className="font-headline-sm text-label-md uppercase tracking-widest text-secondary">Browse by Category</h3>
-                  <ul className="space-y-4">
-                    <li><Link className="font-body-md text-on-surface-variant hover:text-primary transition-colors block" href="/collections?category=engagement-rings">Engagement Rings</Link></li>
-                    <li><Link className="font-body-md text-on-surface-variant hover:text-primary transition-colors block" href="/collections?category=wedding-bands">Wedding Bands</Link></li>
-                    <li><Link className="font-body-md text-on-surface-variant hover:text-primary transition-colors block" href="/collections?category=necklaces">Necklaces</Link></li>
-                    <li><Link className="font-body-md text-on-surface-variant hover:text-primary transition-colors block" href="/collections?category=earrings">Earrings</Link></li>
-                    <li><Link className="font-body-md text-on-surface-variant hover:text-primary transition-colors block" href="/collections?category=bracelets">Bracelets</Link></li>
-                    <li><Link className="font-body-md text-on-surface-variant hover:text-primary transition-colors block" href="/collections?category=mens-collection">Men's Collection</Link></li>
-                  </ul>
-                </div>
-                {/* Column 2: Featured Collection 1 */}
-                <div className="group/item cursor-pointer">
-                  <div className="aspect-square rounded-2xl overflow-hidden mb-4">
-                    <img alt="The Bridal Atelier" className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida/AP1WRLtrmKXLbOlE9j2MBWqnXPAYkpCDLKUxr2sAsBlGSCTOjqzqzBtzJXIkP54BMdehAyTivg4jpLIktAyOxCLyE88Hq1fnSlQ_XYSl7DKLaOsNK-FWc3W9B5yafIC4gTfu2eg4oW2z1kYWhlvtSKeCLYiT8xrpBB3Wf6FKSb63UM-NWB9cvW_FIfdMqi6MDcD39_hUETmsOHMEru7cccfD-dhZA68yAPxwLz_R7X7KGxg9WCY-jsop_s3FUoM" />
-                  </div>
-                  <h4 className="font-headline-sm text-headline-sm text-on-surface mb-2">The Bridal Atelier</h4>
-                  <Link className="font-label-md text-primary flex items-center gap-2" href="/collections?category=bridal-atelier">
-                    Discover
-                    <span className="material-symbols-outlined text-sm">east</span>
-                  </Link>
-                </div>
-                {/* Column 3: Featured Collection 2 */}
-                <div className="group/item cursor-pointer">
-                  <div className="aspect-square rounded-2xl overflow-hidden mb-4">
-                    <img alt="Signature Luminous" className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida/AP1WRLsvk8wW-v6NGesvrahUuVR8eohLUVJKTpCPWbK5cY9UhmGg8OD46eJ60ess0iUTpY7IVZ9JjGyBGIMLbKknNvnjiTZ06nTCCIQRPRdYhm9-AGE7QNExFXI9Sui3EpPKRvOxxWT7S5YNWkl2ShnmnnGXUzlwRGd31PhijpmiXMUlRk3QacCvpz7AwsBLPlvaPuEvWPwnn1vQtPTmy5dsOEPPXGuLXmvCXX8n1Xbzy6RrbNtxc9ii1c0uOTo" />
-                  </div>
-                  <h4 className="font-headline-sm text-headline-sm text-on-surface mb-2">Signature Luminous</h4>
-                  <Link className="font-label-md text-primary flex items-center gap-2" href="/collections?category=signature-luminous">
-                    Discover
-                    <span className="material-symbols-outlined text-sm">east</span>
-                  </Link>
-                </div>
-                {/* Column 4: Editorial Highlight */}
-                <div className="bg-surface-container-low p-6 rounded-3xl space-y-4">
-                  <div className="aspect-[4/3] rounded-xl overflow-hidden">
-                    <img alt="Conflict-Free Craftsmanship" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLvSQ6xMFk3vXsnF7sBY6k_feXtvY6gwcEZkZ1sAq0RhR8VzPnPEXwbLL9EEyq6XeenjJDd-cdnPUGqIRpzGsuVjvnvvyoC3D-jKvpqxlbSQhYUQ0AKc3sM37rkvljdKJjlEDpVC4j6Aiacjp4iVPrSZIFshy0iyZZf5zyqEZzDusurL8uSMORvCTCi2Hr4jyfSCINgF7qIDWRoHxIy9NMxuhshvIYYzlLv2Mo7Z40iLV69lJvgaevcEom8" />
-                  </div>
-                  <div className="space-y-2">
-                    <h4 className="font-label-md text-secondary uppercase tracking-widest">Editorial</h4>
-                    <p className="font-body-md text-on-surface-variant">Conflict-Free Craftsmanship: A journey from lab to legacy.</p>
-                  </div>
-                  <Link href="/collections?consultation=true" className="w-full bg-primary text-on-primary py-3 rounded-full font-label-md hover:bg-primary-container transition-colors block text-center">Book a Consultation</Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
         <div className="group h-full flex items-center">
           <Link
             className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4"
@@ -356,7 +297,6 @@ export default function Header({
           >
             Chains
           </Link>
-          {/* {renderChainsMegaMenu()} */}
           {renderDynamicMegaMenu(CHAINS_MENU)}
         </div>
 
@@ -399,12 +339,12 @@ export default function Header({
           </Link>
           {renderDynamicMegaMenu(NECKLACE_MENU)}
         </div>
-        <Link
+        {/* <Link
           className="text-on-surface/80 hover:text-primary transition-colors cursor-pointer"
           href="/custom"
         >
           Custom
-        </Link>
+        </Link> */}
         {user && (
           <Link
             className="text-on-surface/80 hover:text-primary transition-colors cursor-pointer"

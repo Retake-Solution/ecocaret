@@ -4,24 +4,16 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import SignInForm from "@/components/SignInForm";
 import ProfileDialog from "@/components/ProfileDialog";
 import CartDrawer from "@/components/CartDrawer";
 import Hero from "@/components/Hero";
 import AtelierJourney from "@/components/AtelierJourney";
 import ProductShowcase from "@/components/ProductShowcase";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
-import { setCartOpen, addToCart, removeFromCart, clearCart } from "@/lib/features/cart/cartSlice";
+import { setCartOpen, removeFromCart, clearCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 
-interface Product {
-  id: string;
-  name: string;
-  price: string;
-  image: string;
-  specs: string;
-  description: string;
-}
+
 
 export default function Home() {
   const dispatch = useAppDispatch();
@@ -30,7 +22,6 @@ export default function Home() {
   const cartItems = useAppSelector((state) => state.cart.items);
 
   const [scrolled, setScrolled] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
 
@@ -105,7 +96,7 @@ export default function Home() {
         <AtelierJourney />
 
         {/* Product Showcase: Asymmetric Layout */}
-        <ProductShowcase onProductClick={(product) => setSelectedProduct(product)} />
+        <ProductShowcase />
 
         {/* Values Section: Glassmorphism Triptych */}
         <section className="py-16 md:py-24 bg-surface-container relative">
@@ -118,7 +109,7 @@ export default function Home() {
                 Zero Impact
               </h3>
               <p className="font-body-md text-body-md text-on-surface-variant">
-                We don't just reduce damage; we actively restore ecosystems with
+                We don&apos;t just reduce damage; we actively restore ecosystems with
                 every purchase.
               </p>
             </div>
@@ -204,105 +195,6 @@ export default function Home() {
 
       {/* --- PREMIUM INTERACTIVE DIALOG: USER PROFILE --- */}
       <ProfileDialog isOpen={profileOpen} onClose={() => dispatch(setProfileOpen(false))} />
-
-      {/* --- PREMIUM INTERACTIVE DIALOG: PRODUCT DETAIL QUICK VIEW --- */}
-      <div
-        className={`fixed inset-0 z-50 transition-opacity duration-300 flex items-center justify-center p-4 ${selectedProduct
-          ? "opacity-100 pointer-events-auto"
-          : "opacity-0 pointer-events-none"
-          }`}
-      >
-        {/* Backdrop */}
-        <div
-          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-          onClick={() => setSelectedProduct(null)}
-        />
-        {/* Modal Content */}
-        <div
-          className={`relative bg-surface rounded-[40px] border border-outline-variant/20 max-w-3xl w-full p-8 md:p-12 shadow-2xl transition-all duration-300 transform grid grid-cols-1 md:grid-cols-2 gap-8 ${selectedProduct
-            ? "scale-100 translate-y-0"
-            : "scale-95 translate-y-4"
-            }`}
-        >
-          <button
-            onClick={() => setSelectedProduct(null)}
-            className="absolute top-6 right-6 material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors cursor-pointer z-10"
-          >
-            close
-          </button>
-
-          {selectedProduct && (
-            <>
-              <div className="aspect-square bg-surface-container rounded-3xl overflow-hidden border border-outline-variant/10 shadow-inner">
-                <img
-                  src={selectedProduct.image}
-                  alt={selectedProduct.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              <div className="flex flex-col justify-between space-y-6">
-                <div className="space-y-4">
-                  <span className="font-label-sm text-label-sm text-secondary bg-secondary-container/20 px-3 py-1 rounded-full uppercase tracking-wider">
-                    Conscious Collection
-                  </span>
-                  <h3 className="font-headline-md text-headline-md text-on-surface">
-                    {selectedProduct.name}
-                  </h3>
-                  <p className="font-label-md text-label-md text-secondary font-bold text-lg">
-                    {selectedProduct.price}
-                  </p>
-                  <p className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider border-y border-outline-variant/10 py-2">
-                    {selectedProduct.specs}
-                  </p>
-                  <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-                    {selectedProduct.description}
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  <button
-                    onClick={() => {
-                      dispatch(
-                        addToCart({
-                          id: selectedProduct.id,
-                          name: selectedProduct.name,
-                          price: parseFloat(
-                            selectedProduct.price.replace(/[$,]/g, "")
-                          ),
-                          image: selectedProduct.image,
-                        })
-                      );
-                      setSelectedProduct(null);
-                      dispatch(setCartOpen(true));
-                    }}
-                    className="w-full bg-primary text-on-primary py-4 rounded-full font-label-md text-label-md hover:shadow-lg transition-all text-center flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-sm">
-                      shopping_bag
-                    </span>
-                    Add to Collection Bag
-                  </button>
-                  <button
-                    onClick={() => {
-                      alert(
-                        "Connecting with a private concierge agent for bespoke configuration..."
-                      );
-                      setSelectedProduct(null);
-                    }}
-                    className="w-full border border-secondary text-secondary py-4 rounded-full font-label-md text-label-md hover:bg-secondary/5 transition-all text-center flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-sm">
-                      support_agent
-                    </span>
-                    Request Bespoke Customization
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

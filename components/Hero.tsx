@@ -41,12 +41,12 @@ export default function Hero() {
             heritage with modern conscience.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 pt-2">
-            <a
+            <Link
               href="/collections"
               className="w-full sm:w-auto bg-secondary text-on-secondary px-10 py-4.5 rounded-full font-label-md text-label-md shadow-lg shadow-secondary/15 hover:bg-on-secondary-fixed-variant hover:scale-105 active:scale-95 transition-all text-center font-bold tracking-wider"
             >
               Explore Collections
-            </a>
+            </Link>
             <Link
               href="/our-story"
               className="w-full sm:w-auto border border-secondary/40 text-secondary px-10 py-4.5 rounded-full font-label-md text-label-md hover:bg-secondary/5 hover:border-secondary transition-all text-center block font-bold tracking-wider"

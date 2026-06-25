@@ -65,7 +65,7 @@ export default function OurStoryPage() {
                 Redefining Luxury through Ethics and Science.
               </h1>
               <p className="font-body-lg text-body-lg text-on-surface-variant mb-12 leading-relaxed">
-                We believe that true beauty shouldn't come at the cost of our planet. Eco Caret bridges the gap between timeless craftsmanship and futuristic innovation.
+                We believe that true beauty shouldn&apos;t come at the cost of our planet. Eco Caret bridges the gap between timeless craftsmanship and futuristic innovation.
               </p>
               <div className="flex items-center gap-6">
                 <button className="bg-secondary text-on-secondary px-8 py-4 rounded-lg font-label-md text-label-md hover:opacity-90 transition-all shadow-lg shadow-secondary/20">
@@ -92,7 +92,7 @@ export default function OurStoryPage() {
                 <h2 className="font-headline-md text-headline-md text-on-surface mb-8">The Birth of Brilliance</h2>
                 <div className="space-y-6">
                   <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-                    Our journey begins in the lab, where we replicate the immense heat and pressure of the Earth's mantle. This is not "artificial"—it is identical. Atom for atom, our diamonds possess the same chemical, physical, and optical properties as mined stones.
+                    Our journey begins in the lab, where we replicate the immense heat and pressure of the Earth&apos;s mantle. This is not &quot;artificial&quot;&mdash;it is identical. Atom for atom, our diamonds possess the same chemical, physical, and optical properties as mined stones.
                   </p>
                   <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
                     By choosing laboratory artistry, we bypass the environmental devastation and human rights concerns of traditional mining, delivering a stone of unparalleled purity and a conscience that shines just as bright.
@@ -160,7 +160,7 @@ export default function OurStoryPage() {
             <span className="font-label-md text-label-md text-secondary mb-4 block">The Commitment</span>
             <h2 className="font-headline-md text-headline-md text-on-surface">Radical Transparency</h2>
             <p className="mt-4 font-body-md text-body-md text-on-surface-variant max-w-2xl mx-auto">
-              We don't just claim sustainability; we certify it. Every diamond over 0.5ct comes with a full GIA report and a digital provenance passport.
+              We don&apos;t just claim sustainability; we certify it. Every diamond over 0.5ct comes with a full GIA report and a digital provenance passport.
             </p>
           </div>
           <div className="px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">

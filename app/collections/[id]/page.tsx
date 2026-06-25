@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { fetchProductById, fetchProducts } from "@/services/api";
 import ProductDetailsClient from "./ProductDetailsClient";
+import Footer from "@/components/Footer";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -37,10 +38,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const suggestedProducts = allProducts.filter((p) => p._id !== id).slice(0, 3);
 
   return (
-    <ProductDetailsClient
-      key={product._id}
-      product={product}
-      suggestedProducts={suggestedProducts}
-    />
+    <>
+      <ProductDetailsClient
+        key={product._id}
+        product={product}
+        suggestedProducts={suggestedProducts}
+      />
+      <Footer />
+    </>
   );
 }
