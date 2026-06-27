@@ -24,9 +24,6 @@ const filterOptions = {
   limit: [10, 20, 40],
 };
 
-type FilterOption = string | { label: string; value: string };
-type LabeledFilterOption = Extract<FilterOption, { label: string; value: string }>;
-
 const defaultFilters: ProductFilters = {
   category: "",
   subCategory: "",
@@ -54,33 +51,6 @@ const formatLabel = (value?: string) =>
 const getTaxonomyLabel = (value?: string | ApiCategory) => {
   if (!value) return "";
   return typeof value === "string" ? formatLabel(value) : value.name || formatLabel(value.slug);
-};
-
-const getTaxonomyFilterOption = (
-  value?: string | ApiCategory
-): LabeledFilterOption | null => {
-  if (!value) return null;
-
-  if (typeof value === "string") {
-    return {
-      label: formatLabel(value),
-      value,
-    };
-  }
-
-  return {
-    label: value.name || formatLabel(value.slug),
-    value: value._id,
-  };
-};
-
-const mergeFilterOptions = (existing: FilterOption[], incoming: FilterOption[]) => {
-  const options = new Map<string, FilterOption>();
-  [...existing, ...incoming].forEach((option) => {
-    const value = typeof option === "string" ? option : option.value;
-    options.set(value, option);
-  });
-  return Array.from(options.values());
 };
 
 const getProductName = (product: ApiProduct) =>
@@ -150,67 +120,6 @@ const buildApiFilters = (filters: ProductFilters): ProductFilters => ({
   collection: filters.collection?.trim(),
   shape: filters.shape?.trim(),
 });
-
-const SelectFilter = ({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value?: string;
-  options: FilterOption[];
-  onChange: (value: string) => void;
-}) => (
-  <label className="flex flex-col gap-2">
-    <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-      {label}
-    </span>
-    <select
-      value={value || ""}
-      onChange={(event) => onChange(event.target.value)}
-      className="h-11 rounded-lg border border-outline-variant/50 bg-surface-container-lowest px-3 text-label-sm text-on-surface outline-none transition-colors focus:border-primary"
-    >
-      <option value="">All</option>
-      {options.map((option) => (
-        <option
-          key={typeof option === "string" ? option : option.value}
-          value={typeof option === "string" ? option : option.value}
-        >
-          {typeof option === "string" ? formatLabel(option) : option.label}
-        </option>
-      ))}
-    </select>
-  </label>
-);
-
-const TextFilter = ({
-  label,
-  value,
-  placeholder,
-  type = "text",
-  onChange,
-}: {
-  label: string;
-  value?: string;
-  placeholder: string;
-  type?: "text" | "number";
-  onChange: (value: string) => void;
-}) => (
-  <label className="flex flex-col gap-2">
-    <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-      {label}
-    </span>
-    <input
-      type={type}
-      min={type === "number" ? 0 : undefined}
-      value={value || ""}
-      placeholder={placeholder}
-      onChange={(event) => onChange(event.target.value)}
-      className="h-11 rounded-lg border border-outline-variant/50 bg-surface-container-lowest px-3 text-label-sm text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/50 focus:border-primary"
-    />
-  </label>
-);
 
 export default function Collections() {
   return (
@@ -330,14 +239,6 @@ function CollectionsList({
       <main className="flex-grow flex flex-col min-h-screen pt-32 pb-24 px-margin-mobile md:px-margin-desktop gap-margin-desktop relative">
         {/* Main Content Area */}
         <section className="flex-grow">
-          <header className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-            <div>
-              <h1 className="font-display-lg text-headline-lg text-on-surface leading-tight">
-                Curated Collections
-              </h1>
-            </div>
-          </header>
-
           <div className="w-full">
             <div className="w-full">
               {isLoading ? (

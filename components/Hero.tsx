@@ -1,23 +1,38 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 
-export default function Hero() {
-  const heroImgRef = useRef<HTMLImageElement>(null);
+import { RoundSVG, PrincessSVG, EmeraldSVG, OvalSVG } from "../assets/DiamondShapes";
 
-  // Parallax effect on mouse move in hero
+const DIAMOND_SHAPES = [
+  {
+    name: "Round Brilliant",
+    icon: <RoundSVG />,
+  },
+  {
+    name: "Princess Cut",
+    icon: <PrincessSVG />,
+  },
+  {
+    name: "Emerald Cut",
+    icon: <EmeraldSVG />,
+  },
+  {
+    name: "Oval Cut",
+    icon: <OvalSVG />,
+  }
+];
+
+export default function Hero() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Carousel auto-play
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const amount = 20;
-      const x = (e.clientX / window.innerWidth - 0.5) * amount;
-      const y = (e.clientY / window.innerHeight - 0.5) * amount;
-      if (heroImgRef.current) {
-        heroImgRef.current.style.transform = `scale(1.1) translate(${x}px, ${y}px)`;
-      }
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % DIAMOND_SHAPES.length);
+    }, 4500);
+    return () => clearInterval(timer);
   }, []);
 
   return (
@@ -76,13 +91,21 @@ export default function Hero() {
         <div className="hidden lg:flex lg:col-span-6 relative justify-center lg:justify-end pr-4">
           {/* Main Visual Image Frame */}
           <div className="relative w-[85%] sm:w-[75%] lg:w-[80%] aspect-[4/5] bg-surface-container-high overflow-hidden rounded-[3rem] border border-outline-variant/20 shadow-xl transition-all duration-700 hover:shadow-2xl">
-            <img
-              ref={heroImgRef}
-              alt="Ethical diamond luxury showcase"
-              className="w-full h-full object-cover mix-blend-multiply opacity-90 transition-transform duration-300"
-              src="https://lh3.googleusercontent.com/aida/AP1WRLv0F5oGnO0zyuj4Pl4nv6_AUxudLspFfIcGvtQVLPjb1ob1ySDy5K6oWaGN1xqDVY7sFT05MxcDTzxB6p45xx7W7ptq6DrJyxEO3V8sUHD7Plm9cxh7ReU-oQu595kVYA4408qs8WptexfRNMCxeDlzn5yUXWStoFkUUh-US9XU1UY2Kv32Lrb3Vs9ckBDgD2NYDdcCtnQs1OEKKosaMwlM5cmsBpsa1Svco1bEgWgv8S5Swi8Q4lT7kw"
-              style={{ transform: "scale(1.1)" }}
-            />
+            <div className="w-full h-full relative">
+              {DIAMOND_SHAPES.map((shape, index) => (
+                <div 
+                  key={shape.name}
+                  className={`absolute inset-0 transition-all duration-1000 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+                    index === currentSlide ? "opacity-100 scale-100" : "opacity-0 scale-105 pointer-events-none"
+                  }`}
+                >
+                  {/* Render the SVG Icon instead of an Image */}
+                  <div className="w-full h-full flex items-center justify-center mix-blend-multiply opacity-90">
+                    {shape.icon}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Layered Round Crop Frame (Asymmetrical collage element) */}
@@ -92,18 +115,6 @@ export default function Hero() {
               className="w-full h-full object-cover"
               src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUkaorzslrYslVsDlUte883UsVwZdwvy-QzCeqHJyccKWsjudas3QbOX0Kl-RPK0Gz_GxElFQFifk1-aQd31H68cg67wfLxe8xyAIvXfp-RbfeLky5byGcwC55rPQQdcdf0Xpj4oDay9L48q3pv7Tqt5WHHLkMpoRoloo0aeMFnOWbHlovtR-Wc_pqI-tLgRI4rhsM6W9XR8NanzE2CHy1ZuEpWDiQHN-UoZDJgp3T4FPtz_4GE3KDctn9f4HHVE-bePgiHrCSdxU"
             />
-          </div>
-
-          {/* Glassmorphism Impact Stats Card */}
-          <div className="absolute -bottom-6 -left-8 md:left-4 glass-effect px-6 py-5 rounded-2xl border border-outline-variant/30 hidden md:block max-w-[240px] shadow-lg animate-fade-in hover:scale-105 transition-transform duration-300">
-            <div className="flex items-center space-x-2 text-secondary mb-1">
-              <span className="material-symbols-outlined text-xl">eco</span>
-              <span className="font-label-md text-label-md uppercase tracking-wider font-bold">Atelier Carbon Score</span>
-            </div>
-            <p className="font-[family:var(--font-playfair-display)] text-3xl font-semibold text-on-surface">-84%</p>
-            <p className="font-label-sm text-[11px] text-on-surface-variant mt-1 leading-relaxed">
-              Carbon footprint reduction compared to mined gold & diamonds.
-            </p>
           </div>
         </div>
       </div>

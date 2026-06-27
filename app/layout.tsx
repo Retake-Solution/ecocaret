@@ -22,7 +22,7 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Eco Caret | Organic Luxury & Handcrafted Sustainability",
+  title: "Eco Caret",
   description:
     "Discover jewelry that honors both the wearer and the world. Our lab-grown diamonds are set in recycled gold, merging artisan heritage with modern conscience.",
 };
