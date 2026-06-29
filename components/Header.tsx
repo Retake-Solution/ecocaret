@@ -46,14 +46,14 @@ const SHOP_BY_METAL_SECTION = [
 
 
 const BRACELET_COLLECTIONS: Collection[] = [
-  { id: "bangles", label: "Bangles", href: "/collections?collection=bangles-bracelets" },
-  { id: "bracelets", label: "Bracelets", href: "/collections?collection=bracelet-bracelets" },
+  { id: "bangles", label: "Bangles", href: "/collections?category=bangles-bracelets" },
+  { id: "bracelets", label: "Bracelets", href: "/collections?category=bracelet-bracelets" },
 ];
 
 const NECKLACES_COLLECTIONS: Collection[] = [
-  { id: "cuban", label: "Cuban Necklace", href: "/collections?collection=cuban-necklace" },
-  { id: "tennis", label: "Tennis Necklace", href: "/collections?collection=tennis-necklace" },
-  { id: "charm", label: "Charm Necklace", href: "/collections?collection=charm-necklace" },
+  { id: "cuban", label: "Cuban Necklace", href: "/collections?category=necklaces&subcategory=cuban-necklace" },
+  { id: "tennis", label: "Tennis Necklace", href: "/collections?category=necklaces&subcategory=tennis-necklace" },
+  { id: "charm", label: "Charm Necklace", href: "/collections?category=necklaces&subcategory=charm-necklace" },
 ];
 
 
