@@ -332,7 +332,6 @@ export default function Header({
               </span>
               <div className="flex flex-col gap-4 font-label-md text-on-surface font-semibold pl-1">
                 <Link onClick={() => setMobileMenuOpen(false)} className="hover:text-primary transition-colors" href="/collections">All Collections</Link>
-                <Link onClick={() => setMobileMenuOpen(false)} className="hover:text-primary transition-colors" href="/custom">Custom Atelier</Link>
                 {user && (
                   <Link onClick={() => setMobileMenuOpen(false)} className="hover:text-primary transition-colors" href="/orders">Order History</Link>
                 )}
@@ -571,15 +570,7 @@ export default function Header({
           {renderDynamicMegaMenu(NECKLACE_MENU, "necklaces")}
         </div>
 
-        <div className="group h-full flex items-center">
-          <Link
-            className="text-on-surface/80 group-hover:text-primary transition-colors cursor-pointer py-4 relative"
-            href="/custom"
-          >
-            Custom Atelier
-            <span className="absolute bottom-3 left-0 w-full h-[2px] bg-secondary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
-          </Link>
-        </div>
+
 
         {user && (
           <div className="group h-full flex items-center">

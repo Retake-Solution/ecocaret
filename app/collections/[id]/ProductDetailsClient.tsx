@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
 import ProductAccordion from "@/components/ProductAccordion";
+import ProductVisuals from "@/components/ProductVisuals";
 
 import CartDrawer from "@/components/CartDrawer";
 import ProfileDialog from "@/components/ProfileDialog";
@@ -98,7 +99,7 @@ const getProductPrice = (
         sum + (item.stone?.priceUSD || 0) * (item.caratWeight || 0),
       0
     ) || 0;
-  const subtotal = stoneTotal + metalTotal + (product.makingChargeUSD || 0);
+  const subtotal = stoneTotal + metalTotal + (product.makingChargeUSD || 0) * metalWeight;
   const discount = product.discountPercent ? subtotal * (product.discountPercent / 100) : 0;
 
   return Math.max(subtotal - discount, 0);
@@ -219,62 +220,15 @@ export default function ProductDetailsClient({
 
       <main className="flex-grow pt-32 pb-24 max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop w-full">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
-          <div className="lg:col-span-7 flex flex-col space-y-gutter">
-            <div className="flex flex-col md:flex-row gap-4">
-              {imageUrls.length > 1 && (
-                <div className="flex md:flex-col gap-4 order-2 md:order-1 overflow-x-auto md:overflow-y-auto no-scrollbar w-full md:w-20 lg:w-24 shrink-0">
-                  {imageUrls.map((imgUrl, idx) => (
-                    <button
-                      key={imgUrl}
-                      className={`aspect-square w-20 md:w-full rounded-lg border-2 p-1 bg-white overflow-hidden transition-all duration-300 cursor-pointer shrink-0 ${selectedImage === imgUrl
-                        ? "border-primary ring-1 ring-primary"
-                        : "border-transparent hover:border-outline-variant"
-                        }`}
-                      onClick={() => setSelectedImage(imgUrl)}
-                    >
-                      <img
-                        alt={`${productName} thumbnail ${idx + 1}`}
-                        className="w-full h-full object-cover rounded-md"
-                        src={imgUrl}
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="relative group overflow-hidden rounded-xl bg-surface-container-low aspect-[4/5] md:aspect-square lg:aspect-[4/5] flex-grow order-1 md:order-2 w-full">
-                {selectedImage ? (
-                  <img
-                    alt={`Main view of ${productName}`}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    src={selectedImage}
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-surface-container-lowest via-surface-container-low to-secondary-container/30 text-primary">
-                    <span className="material-symbols-outlined text-7xl mb-4">
-                      diamond
-                    </span>
-                    <span className="font-label-md text-label-md uppercase tracking-widest">
-                      Image Coming Soon
-                    </span>
-                  </div>
-                )}
-                {product.isNewArrival && (
-                  <span className="absolute top-5 left-5 bg-secondary text-on-secondary rounded-full px-4 py-1 text-xs font-bold uppercase tracking-widest">
-                    New Arrival
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="hidden lg:block">
-              <ProductAccordion
-                product={product}
-                selectedPurity={selectedPurity}
-                selectedMetalColor={selectedMetalColor}
-              />
-            </div>
-          </div>
+          <ProductVisuals
+            product={product}
+            productName={productName}
+            imageUrls={imageUrls}
+            selectedImage={selectedImage}
+            setSelectedImage={setSelectedImage}
+            selectedPurity={selectedPurity}
+            selectedMetalColor={selectedMetalColor}
+          />
 
           <div className="lg:col-span-5 flex flex-col justify-start">
             <div className="sticky top-32">
@@ -284,7 +238,7 @@ export default function ProductDetailsClient({
                 </Link>
                 <span>/</span>
                 <span className="text-on-surface-variant font-medium">
-                  {getTaxonomyLabel(product.subCategory) || getTaxonomyLabel(product.category)}
+                  {getTaxonomyLabel(product.category)}
                 </span>
               </nav>
 
@@ -379,7 +333,7 @@ export default function ProductDetailsClient({
               {shouldShowSizeSelector && (
                 <div className="mb-6">
                   <h3 className="font-label-md text-label-md uppercase tracking-widest mb-4">
-                    Ring Size
+                    {getTaxonomyLabel(product.category) ? `${getTaxonomyLabel(product.category).replace(/s$/i, '')} Size` : "Size"}
                   </h3>
                   <select
                     value={selectedSize}
