@@ -23,6 +23,8 @@ export default function ProductVisuals({
   selectedMetalColor,
 }: ProductVisualsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [zoomPos, setZoomPos] = useState({ x: 0, y: 0 });
+  const [isZoomed, setIsZoomed] = useState(false);
 
   return (
     <div className="lg:col-span-7 flex flex-col space-y-gutter">
@@ -54,12 +56,25 @@ export default function ProductVisuals({
           {selectedImage ? (
             <button
               onClick={() => setIsModalOpen(true)}
-              className="w-full h-full cursor-zoom-in"
+              onMouseEnter={() => setIsZoomed(true)}
+              onMouseLeave={() => setIsZoomed(false)}
+              onMouseMove={(e) => {
+                const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
+                const x = ((e.clientX - left) / width) * 100;
+                const y = ((e.clientY - top) / height) * 100;
+                setZoomPos({ x, y });
+              }}
+              className="w-full h-full cursor-zoom-in overflow-hidden block relative"
               aria-label="View full screen image"
             >
               <img
                 alt={`Main view of ${productName}`}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                className="w-full h-full object-cover"
+                style={{
+                  transform: isZoomed ? "scale(2)" : "scale(1)",
+                  transformOrigin: isZoomed ? `${zoomPos.x}% ${zoomPos.y}%` : "center",
+                  transition: isZoomed ? "none" : "transform 0.3s ease-out",
+                }}
                 src={selectedImage}
               />
             </button>

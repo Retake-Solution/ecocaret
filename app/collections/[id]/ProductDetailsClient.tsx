@@ -255,7 +255,7 @@ export default function ProductDetailsClient({
                 )}
               </div>
 
-              <h1 className="font-headline-md text-headline-lg mb-2 text-on-surface leading-tight">
+              <h1 className="font-headline-md text-headline-sm md:text-headline-lg mb-2 text-on-surface leading-tight">
                 {productName}
               </h1>
               <p className="font-body-md text-body-md text-on-surface-variant mb-4">
