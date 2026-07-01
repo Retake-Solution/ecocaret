@@ -45,15 +45,15 @@ export default function OurStoryPage() {
       {/* Local custom styling overrides */}
       <style dangerouslySetInnerHTML={{ __html: `
         .glass-card {
-            background: rgba(255, 248, 244, 0.6);
+            background: rgba(247, 255, 252, 0.72);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
         }
         .copper-gradient {
-            background: linear-gradient(135deg, #894d0d 0%, #8b4e39 100%);
+            background: linear-gradient(135deg, #3C9984 0%, #2f6f73 100%);
         }
         .tonal-elevation {
-            box-shadow: 0 24px 48px -12px rgba(139, 78, 57, 0.08);
+            box-shadow: 0 24px 48px -12px rgba(60, 153, 132, 0.12);
         }
         .font-playfair {
             font-family: var(--font-playfair-display), serif;

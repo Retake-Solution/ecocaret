@@ -290,23 +290,23 @@ export default function OrderDetailPage({ params }: PageProps) {
       <style dangerouslySetInnerHTML={{
         __html: `
         .organic-shadow {
-          box-shadow: 0 10px 30px -10px rgba(137, 77, 13, 0.08);
+          box-shadow: 0 10px 30px -10px rgba(60, 153, 132, 0.12);
           transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s ease;
         }
         .organic-shadow:hover {
           transform: translateY(-2px);
-          box-shadow: 0 15px 35px -8px rgba(137, 77, 13, 0.12);
+          box-shadow: 0 15px 35px -8px rgba(60, 153, 132, 0.16);
         }
         .timeline-gradient {
-          background: linear-gradient(to bottom, #fdae93 0%, #894d0d 100%);
+          background: linear-gradient(to bottom, #8ed8c8 0%, #3C9984 100%);
         }
         .copper-underline {
-          background: linear-gradient(to right, #894d0d, transparent);
+          background: linear-gradient(to right, #3C9984, transparent);
           height: 1px;
           width: 100%;
         }
         .glass-panel {
-          background: rgba(255, 248, 244, 0.7);
+          background: rgba(247, 255, 252, 0.72);
           backdrop-filter: blur(8px);
         }
         .font-playfair {
