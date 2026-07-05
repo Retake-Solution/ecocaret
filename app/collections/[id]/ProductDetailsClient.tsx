@@ -126,7 +126,7 @@ const getMetalHex = (color: string) => {
   if (normalized.includes("white")) return "#E3E4E5";
   if (normalized.includes("yellow")) return "#E5A03A";
   if (normalized.includes("rose")) return "#E0A295";
-  return "#D8C3B4";
+  return "#BDD3CC";
 };
 
 const getPrimaryStone = (product: ApiProduct) => product.productStones?.[0]?.stone;

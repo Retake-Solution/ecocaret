@@ -6,93 +6,93 @@
  */
 
 export const THEME_COLORS = {
-  // Global Eco Caret Brand Colors (Atelier Theme)
+  // Global Eco Caret Brand Colors (Teal Theme)
   global: {
-    primary: "#894d0d",
+    primary: "#3C9984",
     "on-primary": "#ffffff",
-    "primary-container": "#a76526",
-    "on-primary-container": "#fffbff",
+    "primary-container": "#2f7d6c",
+    "on-primary-container": "#f4fffb",
 
-    secondary: "#8b4e39",
+    secondary: "#2f6f73",
     "on-secondary": "#ffffff",
-    "secondary-container": "#fdae93",
-    "on-secondary-container": "#783f2b",
+    "secondary-container": "#bdebe2",
+    "on-secondary-container": "#0f4c40",
 
-    tertiary: "#655b47",
+    tertiary: "#526e68",
     "on-tertiary": "#ffffff",
-    "tertiary-container": "#7f735f",
-    "on-tertiary-container": "#fffbff",
+    "tertiary-container": "#6f8f87",
+    "on-tertiary-container": "#f4fffb",
 
     error: "#ba1a1a",
     "on-error": "#ffffff",
     "error-container": "#ffdad6",
     "on-error-container": "#93000a",
 
-    background: "#fff8f4",
-    "on-background": "#231a11",
+    background: "#f7fffc",
+    "on-background": "#10201c",
 
-    surface: "#fff8f4",
-    "on-surface": "#231a11",
-    "surface-variant": "#f1dfd1",
-    "on-surface-variant": "#524439",
+    surface: "#f7fffc",
+    "on-surface": "#10201c",
+    "surface-variant": "#d9eee8",
+    "on-surface-variant": "#3f514c",
 
-    "surface-dim": "#e8d7c9",
-    "surface-bright": "#fff8f4",
+    "surface-dim": "#d7ebe5",
+    "surface-bright": "#f7fffc",
     "surface-container-lowest": "#ffffff",
-    "surface-container-low": "#fff1e7",
-    "surface-container": "#fdebdc",
-    "surface-container-high": "#f7e5d7",
-    "surface-container-highest": "#f1dfd1",
-    "surface-tint": "#8c4f10",
+    "surface-container-low": "#effbf7",
+    "surface-container": "#e7f6f1",
+    "surface-container-high": "#def0ea",
+    "surface-container-highest": "#d6e9e3",
+    "surface-tint": "#3C9984",
 
-    outline: "#857467",
-    "outline-variant": "#d8c3b4",
+    outline: "#6d807a",
+    "outline-variant": "#bdd3cc",
 
-    "inverse-surface": "#392f25",
-    "inverse-on-surface": "#ffeee0",
-    "inverse-primary": "#ffb77b",
+    "inverse-surface": "#263733",
+    "inverse-on-surface": "#e8f7f2",
+    "inverse-primary": "#88d8c7",
 
     // Fixed Color Variants
-    "primary-fixed": "#ffdcc2",
-    "primary-fixed-dim": "#ffb77b",
-    "on-primary-fixed": "#2e1500",
-    "on-primary-fixed-variant": "#6d3a00",
+    "primary-fixed": "#d6f4ed",
+    "primary-fixed-dim": "#8ed8c8",
+    "on-primary-fixed": "#002019",
+    "on-primary-fixed-variant": "#1f6f5f",
 
-    "secondary-fixed": "#ffdbcf",
-    "secondary-fixed-dim": "#ffb59c",
-    "on-secondary-fixed": "#370e01",
-    "on-secondary-fixed-variant": "#6e3824",
+    "secondary-fixed": "#d0f0eb",
+    "secondary-fixed-dim": "#9bd5cf",
+    "on-secondary-fixed": "#002023",
+    "on-secondary-fixed-variant": "#1d5b5f",
 
-    "tertiary-fixed": "#f0e0c8",
-    "tertiary-fixed-dim": "#d3c5ad",
-    "on-tertiary-fixed": "#221b0b",
-    "on-tertiary-fixed-variant": "#4f4533",
+    "tertiary-fixed": "#dcefeb",
+    "tertiary-fixed-dim": "#b7d3cd",
+    "on-tertiary-fixed": "#10201c",
+    "on-tertiary-fixed-variant": "#3c5f58",
   },
 
-  // Collections Page Specific Colors (Tonal Gold Theme)
+  // Collections Page Specific Colors (Tonal Teal Theme)
   collections: {
-    primary: "#735c00",
-    secondary: "#685e31",
-    background: "#fff8f2",
-    surface: "#fff8f2",
-    "surface-container": "#f6eddf",
-    "surface-container-low": "#fcf2e5",
-    "surface-container-high": "#f0e7da",
-    "surface-container-highest": "#ebe1d4",
+    primary: "#3C9984",
+    secondary: "#2f6f73",
+    background: "#f7fffc",
+    surface: "#f7fffc",
+    "surface-container": "#e7f6f1",
+    "surface-container-low": "#effbf7",
+    "surface-container-high": "#def0ea",
+    "surface-container-highest": "#d6e9e3",
     "surface-container-lowest": "#ffffff",
-    "on-surface": "#1f1b13",
-    "on-surface-variant": "#4d4635",
-    outline: "#7f7663",
-    "outline-variant": "#d0c5af",
-    "primary-container": "#d4af37",
-    "on-primary-container": "#554300",
-    "secondary-container": "#f1e3a9",
-    "on-secondary-container": "#6e6436",
+    "on-surface": "#10201c",
+    "on-surface-variant": "#3f514c",
+    outline: "#6d807a",
+    "outline-variant": "#bdd3cc",
+    "primary-container": "#d6f4ed",
+    "on-primary-container": "#1f6f5f",
+    "secondary-container": "#bdebe2",
+    "on-secondary-container": "#0f4c40",
   },
 
   // Accents and Metallic Materials
   accents: {
-    copper: "#b87333",       // Used in card borders and luxury lines
+    copper: "#3C9984",       // Used in card borders and luxury lines
     platinum: "#e5e4e2",     // Bespoke ring visualizer metal
     roseGold: "#e6a08a",     // Bespoke ring visualizer metal
     yellowGold: "#ffd700",   // Bespoke ring visualizer metal

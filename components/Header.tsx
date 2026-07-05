@@ -489,11 +489,11 @@ export default function Header({
           background: transparent;
         }
         .custom-menu-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(133, 116, 103, 0.25);
+          background: rgba(109, 128, 122, 0.25);
           border-radius: 2px;
         }
         .custom-menu-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(133, 116, 103, 0.45);
+          background: rgba(109, 128, 122, 0.45);
         }
       `}} />
       <Link

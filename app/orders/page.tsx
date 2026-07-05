@@ -38,13 +38,13 @@ export default function OrderHistory() {
       <style dangerouslySetInnerHTML={{ __html: `
         .order-card {
           background-color: ${THEME_COLORS.global["surface-container-low"]};
-          border: 1px solid rgba(133, 116, 103, 0.1);
+          border: 1px solid rgba(109, 128, 122, 0.14);
           transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
         }
         .order-card:hover {
           background-color: ${THEME_COLORS.global["surface-container"]};
           transform: translateY(-4px);
-          box-shadow: 0 20px 40px -20px rgba(137, 77, 13, 0.1);
+          box-shadow: 0 20px 40px -20px rgba(60, 153, 132, 0.14);
         }
         .font-playfair {
           font-family: var(--font-playfair-display), serif;

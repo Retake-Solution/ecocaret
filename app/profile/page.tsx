@@ -127,10 +127,10 @@ export default function ProfilePage() {
       <style dangerouslySetInnerHTML={{
         __html: `
         .editorial-gradient {
-          background: linear-gradient(to top, rgba(35, 26, 17, 0.7) 0%, rgba(35, 26, 17, 0.2) 60%, transparent 100%);
+          background: linear-gradient(to top, rgba(16, 32, 28, 0.7) 0%, rgba(16, 32, 28, 0.2) 60%, transparent 100%);
         }
         .copper-accent {
-          border-top: 2px solid #b87333;
+          border-top: 2px solid #3C9984;
         }
         .font-playfair {
           font-family: var(--font-playfair-display), serif;
