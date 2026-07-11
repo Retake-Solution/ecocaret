@@ -2,6 +2,7 @@
 
 import React, { use, useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
@@ -10,6 +11,8 @@ import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { setCartOpen, removeFromCart, clearCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import { THEME_COLORS } from "@/theme/colors";
+import { getOrderById, getOrderEvents, OrderData, OrderEvent } from "@/services/api";
+import OrderTimeline from "@/components/OrderTimeline";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -18,11 +21,54 @@ interface PageProps {
 export default function OrderDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const cartOpen = useAppSelector((state) => state.cart.isOpen);
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const cartItems = useAppSelector((state) => state.cart.items);
 
   const [scrolled, setScrolled] = useState(false);
+  const [liveOrder, setLiveOrder] = useState<OrderData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [events, setEvents] = useState<OrderEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+
+  // Map mock data dynamically depending on URL ID
+  const isBracelet = id === "AUR-881045" || id.toLowerCase().includes("bracelet");
+  const isMock = isBracelet || id === "AUR-882910";
+
+  useEffect(() => {
+    const fetchOrderAndEvents = async () => {
+      setLoading(true);
+      setEventsLoading(true);
+      setError("");
+      try {
+        const orderResult = await getOrderById(id);
+        setLiveOrder(orderResult.data);
+      } catch (err: any) {
+        setError(err.message || "Failed to load order provenance.");
+      } finally {
+        setLoading(false);
+      }
+
+      try {
+        const eventsResult = await getOrderEvents(id);
+        // Reversing to show newest at the top (reverse chronological order)
+        setEvents([...eventsResult.data].reverse());
+      } catch (err) {
+        console.error("Failed to load order events:", err);
+      } finally {
+        setEventsLoading(false);
+      }
+    };
+
+    if (!isMock) {
+      fetchOrderAndEvents();
+    } else {
+      setLoading(false);
+      setEventsLoading(false);
+    }
+  }, [id, isMock]);
 
   // Scroll listener for Header solid transition
   useEffect(() => {
@@ -33,28 +79,71 @@ export default function OrderDetailPage({ params }: PageProps) {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Map mock data dynamically depending on URL ID
-  const isBracelet = id === "AUR-881045" || id.toLowerCase().includes("bracelet");
-
-  const orderDetails = {
-    number: id.startsWith("#") ? id : `#${id}`,
-    name: isBracelet ? "Sophisticated Diamond Tennis Bracelet" : "Celestia Solitaire Ring",
-    price: isBracelet ? "$12,400.00" : "£14,500.00",
-    date: isBracelet ? "August 12, 2023" : "October 24, 2023",
-    deliveryDate: isBracelet ? "Aug 15" : "Nov 02",
-    specs: isBracelet
-      ? "Metal: Platinum • Length: 7 inches • Diamonds: 8.42ct Princess Cut"
-      : "Metal: Platinum • Size: M • Diamond: 2.05ct Oval",
-    image: isBracelet
-      ? "https://lh3.googleusercontent.com/aida/AP1WRLtNLNOmKIh9k73DJcyIy9iUcOU-b62nNBxxcDn8bd-XG_QjyPZ0LirSv9rfqFPvPwGoD6SP0zr3qoYQLDqWtBo0pndXoWV_Sn5TeqlXilBTjT_JbuvFfwKLuegTeBqEVPZqxwfsqd2Jp9JtSpbfDZmw19WjjrPc8YewJSz8bs7jw3aazoXh9H1hY0mS7FZ8Nv8BGejMkb4vRmUkb3MwD-7fIbzoN_JMu4bszZi6_AuZjsf4mDXmbRHGizs"
-      : "https://lh3.googleusercontent.com/aida/AP1WRLurFJQ4iSPdztJ-UpOPfXfi-3UabSzn06tAERclG0j87fz_l9RO3Rd-sBpcuukbwu9XETXjdCAlINMskwEsll7ag5Y9dnuAT0W8yk1inPVRk1Kuj1xlvlm5COlBklKeavfM6oEb1lv7lp_Povi8AY0mqsExyG8uOSsL3B_0YR1mDPDdm_GhdrIW9Fv1v_ZRoqQucwdU5ai6YIF9Bg4Gz5sFLq1GQ1eJaghEnt7209yfkNEM-9NuPMharDM",
-    stepIndex: isBracelet ? 4 : 3, // Shipped vs Quality Check
-  };
+  const orderDetails = liveOrder
+    ? {
+        number: `#${liveOrder.orderNumber}`,
+        name: liveOrder.items[0]?.productSnapshot?.name || "Bespoke Jewelry Piece",
+        price: `$${(liveOrder.totals.totalMinor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        date: new Date(liveOrder.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+        deliveryDate: new Date(new Date(liveOrder.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        specs: `Metal: ${liveOrder.items[0]?.variantSnapshot?.metalType} • Purity: ${liveOrder.items[0]?.variantSnapshot?.purity} • Color: ${liveOrder.items[0]?.variantSnapshot?.metalColor} • Size: ${liveOrder.items[0]?.variantSnapshot?.sizeLabel}`,
+        image: liveOrder.items[0]?.productSnapshot?.imageUrl || "https://lh3.googleusercontent.com/aida/AP1WRLurFJQ4iSPdztJ-UpOPfXfi-3UabSzn06tAERclG0j87fz_l9RO3Rd-sBpcuukbwu9XETXjdCAlINMskwEsll7ag5Y9dnuAT0W8yk1inPVRk1Kuj1xlvlm5COlBklKeavfM6oEb1lv7lp_Povi8AY0mqsExyG8uOSsL3B_0YR1mDPDdm_GhdrIW9Fv1v_ZRoqQucwdU5ai6YIF9Bg4Gz5sFLq1GQ1eJaghEnt7209yfkNEM-9NuPMharDM",
+        stepIndex: liveOrder.fulfillmentStatus.toLowerCase() === "fulfilled" || liveOrder.fulfillmentStatus.toLowerCase() === "delivered" ? 4 : liveOrder.fulfillmentStatus.toLowerCase() === "shipped" ? 3 : 2,
+      }
+    : {
+        number: id.startsWith("#") ? id : `#${id}`,
+        name: isBracelet ? "Sophisticated Diamond Tennis Bracelet" : "Celestia Solitaire Ring",
+        price: isBracelet ? "$12,400.00" : "£14,500.00",
+        date: isBracelet ? "August 12, 2023" : "October 24, 2023",
+        deliveryDate: isBracelet ? "Aug 15" : "Nov 02",
+        specs: isBracelet
+          ? "Metal: Platinum • Length: 7 inches • Diamonds: 8.42ct Princess Cut"
+          : "Metal: Platinum • Size: M • Diamond: 2.05ct Oval",
+        image: isBracelet
+          ? "https://lh3.googleusercontent.com/aida/AP1WRLtNLNOmKIh9k73DJcyIy9iUcOU-b62nNBxxcDn8bd-XG_QjyPZ0LirSv9rfqFPvPwGoD6SP0zr3qoYQLDqWtBo0pndXoWV_Sn5TeqlXilBTjT_JbuvFfwKLuegTeBqEVPZqxwfsqd2Jp9JtSpbfDZmw19WjjrPc8YewJSz8bs7jw3aazoXh9H1hY0mS7FZ8Nv8BGejMkb4vRmUkb3MwD-7fIbzoN_JMu4bszZi6_AuZjsf4mDXmbRHGizs"
+          : "https://lh3.googleusercontent.com/aida/AP1WRLurFJQ4iSPdztJ-UpOPfXfi-3UabSzn06tAERclG0j87fz_l9RO3Rd-sBpcuukbwu9XETXjdCAlINMskwEsll7ag5Y9dnuAT0W8yk1inPVRk1Kuj1xlvlm5COlBklKeavfM6oEb1lv7lp_Povi8AY0mqsExyG8uOSsL3B_0YR1mDPDdm_GhdrIW9Fv1v_ZRoqQucwdU5ai6YIF9Bg4Gz5sFLq1GQ1eJaghEnt7209yfkNEM-9NuPMharDM",
+        stepIndex: isBracelet ? 4 : 3,
+      };
 
   const handleDownloadInvoice = () => {
     alert(`Generating invoice receipt for order ${orderDetails.number}...`);
   };
 
+  // Status mapping colors & labels
+  const normStatus = (liveOrder?.fulfillmentStatus || (isBracelet ? "shipped" : "processing")).toLowerCase();
+  const isDelivered = normStatus === "fulfilled" || normStatus === "delivered";
+  const isShipped = normStatus === "shipped";
+  const isCancelled = normStatus === "cancelled" || normStatus === "refunded";
+  
+  let statusLabel = "Crafting";
+  let statusColor: string = THEME_COLORS.global.secondary;
+  
+  if (isDelivered) {
+    statusLabel = "Delivered";
+    statusColor = THEME_COLORS.global.primary;
+  } else if (isShipped) {
+    statusLabel = "Shipped";
+    statusColor = "#2B8A75";
+  } else if (isCancelled) {
+    statusLabel = "Cancelled";
+    statusColor = "#EF4444";
+  } else if (normStatus === "pending") {
+    statusLabel = "Pending";
+    statusColor = "#D97706";
+  }
+
+  // Payment status mapping
+  const normPayment = (liveOrder?.paymentStatus || "paid").toLowerCase();
+  const isPaid = normPayment === "paid" || normPayment === "authorized" || normPayment === "captured";
+  let payStatusLabel = "Unpaid";
+  let payStatusColor: string = "#71717A";
+  if (isPaid) {
+    payStatusLabel = "Paid";
+    payStatusColor = THEME_COLORS.global.primary;
+  } else if (normPayment === "pending") {
+    payStatusLabel = "Payment Pending";
+    payStatusColor = "#D97706";
+  }
 
   const renderOrderHeader = () => {
     return (
@@ -62,7 +151,7 @@ export default function OrderDetailPage({ params }: PageProps) {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <span className="font-label-md text-label-md text-secondary uppercase tracking-widest block mb-2">
-              Order Confirmed
+              Sourcing Provenance Certificate
             </span>
             <h1 className="font-headline-lg text-headline-lg text-primary">
               Order {orderDetails.number}
@@ -70,83 +159,84 @@ export default function OrderDetailPage({ params }: PageProps) {
             <p className="font-body-md text-body-md text-on-surface-variant mt-2">
               Placed on {orderDetails.date} • Estimated Delivery: {orderDetails.deliveryDate}
             </p>
+            <div className="flex flex-wrap gap-2 mt-4">
+              <span className="text-[10px] font-bold px-3.5 py-1.5 rounded-full uppercase tracking-widest text-xs" style={{ backgroundColor: statusColor + "12", color: statusColor }}>
+                Status: {statusLabel}
+              </span>
+              <span className="text-[10px] font-bold px-3.5 py-1.5 rounded-full uppercase tracking-widest text-xs" style={{ backgroundColor: payStatusColor + "12", color: payStatusColor }}>
+                Payment: {payStatusLabel}
+              </span>
+            </div>
           </div>
           <button
             onClick={handleDownloadInvoice}
             className="flex items-center gap-2 font-label-md text-label-md text-secondary hover:text-primary transition-all group cursor-pointer text-left self-start md:self-end"
           >
             <span className="material-symbols-outlined text-[20px]">download</span>
-            <span className="border-b border-transparent group-hover:border-primary">Download Invoice</span>
+            <span className="border-b border-transparent group-hover:border-primary">Download Certificate</span>
           </button>
         </div>
         <div className="copper-underline mt-8 opacity-20"></div>
       </div>
-    )
-  }
-
+    );
+  };
 
   const renderItemSummary = () => {
+    const items = liveOrder ? liveOrder.items : [
+      {
+        productSnapshot: { name: orderDetails.name, imageUrl: orderDetails.image, sku: isBracelet ? "EC-BRC-SOL-02" : "EC-RNG-CEL-10" },
+        variantSnapshot: { metalType: "platinum", metalColor: "white", purity: "950", sizeLabel: isBracelet ? "7 inches" : "Size M" },
+        quantity: { ordered: 1 },
+        pricingSnapshot: { finalUnitPriceMinor: parseFloat(orderDetails.price.replace(/[^\d.]/g, '')) * 100 }
+      }
+    ];
+
     return (
-      <div className="bg-surface-container-low rounded-xl p-8 organic-shadow border border-surface-container-high">
+      <div className="bg-surface-container-low rounded-xl p-8 organic-shadow border border-outline-variant/10">
         <h3 className="font-headline-sm text-headline-sm text-primary mb-8">
-          Order Summary
+          Sourced Masterpieces
         </h3>
         <div className="space-y-8">
-          <div className="flex gap-6 items-start">
-            <div className="w-24 h-24 rounded-lg overflow-hidden bg-surface-container-highest flex-shrink-0">
-              <img
-                className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
-                alt={orderDetails.name}
-                src={orderDetails.image}
-              />
-            </div>
-            <div className="flex-grow">
-              <div className="flex justify-between items-start">
-                <h4 className="font-body-lg text-body-lg font-semibold text-on-surface">
-                  {orderDetails.name}
-                </h4>
-                <span className="font-body-lg text-body-lg text-primary">
-                  {orderDetails.price}
-                </span>
+          {items.map((item, idx) => {
+            const price = item.pricingSnapshot.finalUnitPriceMinor / 100;
+            const itemSpecs = `Metal: ${item.variantSnapshot.purity} ${item.variantSnapshot.metalColor} ${item.variantSnapshot.metalType} • Size: ${item.variantSnapshot.sizeLabel}`;
+            return (
+              <div key={idx} className="flex gap-6 items-start border-b border-outline-variant/10 pb-6 last:border-0 last:pb-0">
+                <div className="w-24 h-24 rounded-lg overflow-hidden bg-surface-container-highest flex-shrink-0 border border-outline-variant/15">
+                  <img
+                    className="w-full h-full object-cover"
+                    alt={item.productSnapshot.name}
+                    src={item.productSnapshot.imageUrl || "https://lh3.googleusercontent.com/aida/AP1WRLurFJQ4iSPdztJ-UpOPfXfi-3UabSzn06tAERclG0j87fz_l9RO3Rd-sBpcuukbwu9XETXjdCAlINMskwEsll7ag5Y9dnuAT0W8yk1inPVRk1Kuj1xlvlm5COlBklKeavfM6oEb1lv7lp_Povi8AY0mqsExyG8uOSsL3B_0YR1mDPDdm_GhdrIW9Fv1v_ZRoqQucwdU5ai6YIF9Bg4Gz5sFLq1GQ1eJaghEnt7209yfkNEM-9NuPMharDM"}
+                  />
+                </div>
+                <div className="flex-grow">
+                  <div className="flex justify-between items-start">
+                    <h4 className="font-body-lg text-body-lg font-semibold text-on-surface leading-tight">
+                      {item.productSnapshot.name}
+                    </h4>
+                    <span className="font-body-lg text-body-lg text-primary font-bold">
+                      ${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <p className="font-label-sm text-label-sm text-on-surface-variant/80 mt-2">
+                    {itemSpecs}
+                  </p>
+                  <div className="flex justify-between items-center mt-3 text-xs">
+                    <span className="text-on-surface-variant uppercase tracking-wider font-bold">
+                      SKU: {item.productSnapshot.sku}
+                    </span>
+                    <span className="px-3 py-1 bg-surface-container-highest text-on-surface font-semibold rounded-full">
+                      Qty: {item.quantity.ordered}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <p className="font-label-md text-label-md text-on-surface-variant mt-1">
-                {orderDetails.specs}
-              </p>
-              <div className="mt-4 flex items-center gap-4">
-                <button
-                  onClick={() => alert("Engraving request sent to Atelier Concierge.")}
-                  className="font-label-sm text-label-sm text-secondary hover:underline cursor-pointer"
-                >
-                  Add Inscription
-                </button>
-                <button
-                  onClick={() => alert("Complimentary resizing request form initialized.")}
-                  className="font-label-sm text-label-sm text-secondary hover:underline cursor-pointer"
-                >
-                  Request Resizing
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-outline-variant/30 pt-8 space-y-4">
-            <div className="flex justify-between font-label-md text-label-md text-on-surface-variant">
-              <span>Subtotal</span>
-              <span>{orderDetails.price}</span>
-            </div>
-            <div className="flex justify-between font-label-md text-label-md text-on-surface-variant">
-              <span>Sustainability-Verified Delivery</span>
-              <span className="text-secondary">Complimentary</span>
-            </div>
-            <div className="flex justify-between font-body-lg text-body-lg font-bold text-primary pt-4 border-t border-outline-variant/30">
-              <span>Total Carbon-Offset Price</span>
-              <span>{orderDetails.price}</span>
-            </div>
-          </div>
+            );
+          })}
         </div>
       </div>
-    )
-  }
+    );
+  };
 
   const renderSupportBox = () => {
     return (
@@ -165,124 +255,14 @@ export default function OrderDetailPage({ params }: PageProps) {
           </div>
         </div>
       </div>
-    )
-  }
+    );
+  };
 
-  const renderCareCTA = () => {
-    return (
-      <div className="bg-tertiary-container rounded-xl p-8 text-on-tertiary-container organic-shadow overflow-hidden relative">
-        <div className="relative z-10">
-          <h3 className="font-headline-sm text-headline-sm text-tertiary-fixed mb-2">Atelier Care</h3>
-          <p className="font-body-md text-body-md opacity-90 mb-6 text-white/90">
-            Schedule your first complimentary ultrasonic cleaning or speak with an expert about insurance valuation.
-          </p>
-          <button
-            onClick={() => alert("Atelier consultation calendar opened. Please select a date.")}
-            className="bg-white/10 hover:bg-white/20 border border-white/30 backdrop-blur-sm px-6 py-3 rounded-lg font-label-md text-label-md transition-all w-full cursor-pointer text-white font-bold"
-          >
-            Book Consultation
-          </button>
-        </div>
-        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-secondary rounded-full blur-[60px] opacity-20"></div>
-      </div>
-    )
-  }
-
-
-  const renderTrakingTimeLine = () => {
-    return (
-      <div className="bg-surface-container rounded-xl p-8 organic-shadow border border-outline-variant/20">
-        <h3 className="font-label-md text-label-md text-primary uppercase tracking-widest mb-8">
-          Journey Status
-        </h3>
-
-        <div className="relative pl-8 space-y-12">
-          {/* Vertical Line */}
-          <div className="absolute left-[11px] top-0 bottom-0 w-[2px] bg-outline-variant/30"></div>
-          <div
-            className="absolute left-[11px] top-0 w-[2px] timeline-gradient"
-            style={{ height: orderDetails.stepIndex === 4 ? "100%" : "60%" }}
-          ></div>
-
-          {/* Step 1 */}
-          <div className="relative">
-            <div className="absolute -left-[29px] w-5 h-5 rounded-full bg-primary ring-4 ring-primary-fixed flex items-center justify-center">
-              <span className="material-symbols-outlined text-white text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                check
-              </span>
-            </div>
-            <div>
-              <p className="font-label-md text-label-md font-bold text-on-surface">Order Placed</p>
-              <p className="font-label-sm text-label-sm text-on-surface-variant">Oct 24 • 14:30 GMT</p>
-            </div>
-          </div>
-
-          {/* Step 2 */}
-          <div className="relative">
-            <div className="absolute -left-[29px] w-5 h-5 rounded-full bg-primary ring-4 ring-primary-fixed flex items-center justify-center">
-              <span className="material-symbols-outlined text-white text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                check
-              </span>
-            </div>
-            <div>
-              <p className="font-label-md text-label-md font-bold text-on-surface">Crafting &amp; Polishing</p>
-              <p className="font-label-sm text-label-sm text-on-surface-variant">Oct 26 • Atelier London</p>
-            </div>
-          </div>
-
-          {/* Step 3 */}
-          <div className="relative">
-            {orderDetails.stepIndex === 3 ? (
-              <div className="absolute -left-[29px] w-5 h-5 rounded-full bg-secondary-container animate-pulse flex items-center justify-center">
-                <div className="w-2 h-2 rounded-full bg-secondary"></div>
-              </div>
-            ) : (
-              <div className="absolute -left-[29px] w-5 h-5 rounded-full bg-primary ring-4 ring-primary-fixed flex items-center justify-center">
-                <span className="material-symbols-outlined text-white text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  check
-                </span>
-              </div>
-            )}
-            <div>
-              <p className={`font-label-md text-label-md font-bold ${orderDetails.stepIndex === 3 ? "text-primary" : "text-on-surface"}`}>
-                Quality Inspection
-              </p>
-              <p className="font-label-sm text-label-sm text-on-surface-variant">
-                {orderDetails.stepIndex === 3 ? "Estimated completion today" : "Completed Oct 29"}
-              </p>
-            </div>
-          </div>
-
-          {/* Step 4 */}
-          <div className={`relative ${orderDetails.stepIndex === 3 ? "opacity-40" : ""}`}>
-            {orderDetails.stepIndex === 4 ? (
-              <div className="absolute -left-[29px] w-5 h-5 rounded-full bg-secondary-container animate-pulse flex items-center justify-center">
-                <div className="w-2 h-2 rounded-full bg-secondary"></div>
-              </div>
-            ) : (
-              <div className="absolute -left-[29px] w-5 h-5 rounded-full bg-outline-variant"></div>
-            )}
-            <div>
-              <p className={`font-label-md text-label-md font-bold ${orderDetails.stepIndex === 4 ? "text-primary" : "text-on-surface"}`}>
-                Secure Handover &amp; Shipment
-              </p>
-              <p className="font-label-sm text-label-sm text-on-surface-variant">
-                {orderDetails.stepIndex === 4 ? "In transit - Estimated arrival tomorrow" : "Pending delivery partner"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={() => alert(`Redirecting to UPS secure carbon-neutral tracking for ${orderDetails.number}...`)}
-          className="w-full mt-12 py-4 px-6 bg-primary text-white font-label-md text-label-md rounded-lg hover:bg-primary-container transition-all shadow-sm active:scale-[0.98] cursor-pointer"
-        >
-          Track Detailed Shipment
-        </button>
-      </div>
-    )
-
-  }
+  // Convert minor units to standard decimals
+  const subtotal = liveOrder ? (liveOrder.totals.merchandiseSubtotalMinor / 100) : (isBracelet ? 12400 : 14500);
+  const shippingAmount = liveOrder ? (liveOrder.totals.shippingMinor / 100) : 0;
+  const taxAmount = liveOrder ? (liveOrder.totals.taxMinor / 100) : (subtotal * 0.08);
+  const totalAmount = liveOrder ? (liveOrder.totals.totalMinor / 100) : (subtotal + taxAmount + shippingAmount);
 
   return (
     <div className="bg-background text-on-surface font-body-md min-h-screen flex flex-col relative overflow-x-hidden selection:bg-secondary-container">
@@ -324,97 +304,123 @@ export default function OrderDetailPage({ params }: PageProps) {
 
       {/* Main Content Area */}
       <main className="flex-grow max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-12 pt-28 w-full">
-        {/* Order Header */}
-        {renderOrderHeader()}
-
-        {/* Bento Layout Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
-          {/* Main Content Left: Cinematic Preview & Summary */}
-          <div className="lg:col-span-8 space-y-gutter">
-
-            {/* Cinematic Preview */}
-            <div className="relative group overflow-hidden rounded-xl bg-surface-container-low organic-shadow aspect-[16/9] border border-outline-variant/10">
-              <img
-                alt="Cinematic jewelry item preview"
-                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                src={orderDetails.image}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-8">
-                <h2 className="font-headline-md text-headline-md text-white mb-2">
-                  {orderDetails.name}
-                </h2>
-                <p className="font-body-md text-body-md text-white/80 max-w-md">
-                  Ethically crafted sustainable diamonds set in certified zero-carbon setting.
-                </p>
-              </div>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-32 space-y-4">
+            <div className="w-12 h-12 rounded-full border-4 border-outline-variant/30 border-t-primary animate-spin" style={{ borderTopColor: THEME_COLORS.global.primary }} />
+            <p className="text-on-surface-variant text-sm font-label-md tracking-wider uppercase animate-pulse">
+              Retrieving Provenance Certificate...
+            </p>
+          </div>
+        ) : error ? (
+          <div className="p-8 rounded-2xl bg-error-container/40 border border-error/20 text-center max-w-md mx-auto space-y-4">
+            <span className="material-symbols-outlined text-error text-5xl">warning</span>
+            <h3 className="font-playfair text-2xl font-semibold text-on-error-container">Sourcing Ledger Link Failed</h3>
+            <p className="text-on-error-container font-medium text-sm leading-relaxed">{error}</p>
+            <div className="flex gap-4 justify-center">
+              <Link href="/orders" className="bg-primary text-white px-6 py-2.5 rounded-full text-xs font-bold uppercase hover:bg-secondary transition-all">
+                Go to History
+              </Link>
             </div>
+          </div>
+        ) : (
+          <>
+            {/* Order Header */}
+            {renderOrderHeader()}
 
-            {/* Item Summary */}
-            {renderItemSummary()}
+            {/* Bento Layout Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+              {/* Main Content Left: Cinematic Preview & Summary */}
+              <div className="lg:col-span-8 space-y-gutter">
+                {/* Item Summary */}
+                {renderItemSummary()}
 
-            {/* GIA Documentation */}
-            <div className="bg-surface-container-highest rounded-xl p-8 border border-primary-fixed overflow-hidden relative">
-              <div className="flex flex-col md:flex-row gap-8 items-center">
-                <div className="md:w-1/3 flex-shrink-0">
-                  <img
-                    alt="GIA certification report document"
-                    className="w-full rounded-lg shadow-sm"
-                    src="https://lh3.googleusercontent.com/aida/AP1WRLvEBZHy330ijdEQQPUeXP0uVXLbkzAyIn9J48AVUHz7ckuOzI4JC7ymQcxxMSJzlaXjAChvu_bEDxDgc-spX-Zj96AHopFhF6rQaWzq-L5ynoiOjbMdyaEFP3QjQlakB2Y4K8w1QgqGpA_BI7tmzeuGQ1_S7Oq_BShiaXFddQA98K-bMTYJeVDeJZSmado_iaYN92TFhGd4KekzCvcRFd3KfqD4bVPw0UCoJ3FMbPxRmOUyxKa6PN9c-w"
-                  />
-                </div>
-                <div className="md:w-2/3">
-                  <h3 className="font-headline-sm text-headline-sm text-primary mb-4">
-                    Provenance &amp; Quality
+                {/* Sourcing Destination Details */}
+                <div className="bg-surface-container-low rounded-xl p-8 border border-outline-variant/10 organic-shadow">
+                  <h3 className="font-headline-sm text-headline-sm text-primary mb-6">
+                    Sourcing Shipping Destination
                   </h3>
-                  <p className="font-body-md text-body-md text-on-surface-variant mb-6">
-                    Your diamond is accompanied by a digital-first GIA Diamond Dossier®, providing a permanent, immutable record of its unique fingerprint and ethical origin.
-                  </p>
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <li className="flex items-center gap-2 font-label-md text-label-md text-on-surface">
-                      <span className="material-symbols-outlined text-[18px] text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>
-                        verified
-                      </span>
-                      Conflict-Free Certified
-                    </li>
-                    <li className="flex items-center gap-2 font-label-md text-label-md text-on-surface">
-                      <span className="material-symbols-outlined text-[18px] text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>
-                        verified
-                      </span>
-                      Recycled Platinum
-                    </li>
-                    <li className="flex items-center gap-2 font-label-md text-label-md text-on-surface">
-                      <span className="material-symbols-outlined text-[18px] text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>
-                        verified
-                      </span>
-                      GIA Graded: Excellent
-                    </li>
-                    <li className="flex items-center gap-2 font-label-md text-label-md text-on-surface">
-                      <span className="material-symbols-outlined text-[18px] text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>
-                        verified
-                      </span>
-                      Lifetime Guarantee
-                    </li>
-                  </ul>
+                  {liveOrder?.shippingAddressSnapshot ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm text-on-surface-variant">
+                      <div className="space-y-2">
+                        <p className="text-[10px] uppercase tracking-wider font-bold text-secondary">Delivery Address</p>
+                        <div className="font-medium text-on-surface space-y-1">
+                          <p className="font-bold text-base text-primary">{liveOrder.shippingAddressSnapshot.name}</p>
+                          <p>{liveOrder.shippingAddressSnapshot.line1}</p>
+                          {liveOrder.shippingAddressSnapshot.line2 && <p>{liveOrder.shippingAddressSnapshot.line2}</p>}
+                          <p>{liveOrder.shippingAddressSnapshot.city}, {liveOrder.shippingAddressSnapshot.state} {liveOrder.shippingAddressSnapshot.postalCode}</p>
+                          <p className="uppercase font-bold tracking-widest text-xs mt-1">{liveOrder.shippingAddressSnapshot.country}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="space-y-1">
+                          <p className="text-[10px] uppercase tracking-wider font-bold text-secondary">Contact Phone</p>
+                          <p className="font-bold text-on-surface">{liveOrder.shippingAddressSnapshot.phone}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] uppercase tracking-wider font-bold text-secondary">Billing Address</p>
+                          <p className="font-medium text-on-surface">Same as shipping destination</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-on-surface-variant leading-relaxed">
+                      <p className="font-bold text-on-surface">Nirmal Sorathiya</p>
+                      <p>123 Diamond Avenue</p>
+                      <p>London, Greater London NW1 4NP</p>
+                      <p className="uppercase">United Kingdom</p>
+                    </div>
+                  )}
                 </div>
+
+                {/* Sourced Pricing Breakdown */}
+                <div className="bg-surface-container-low rounded-xl p-8 border border-outline-variant/10 organic-shadow text-sm space-y-4">
+                  <h3 className="font-label-md text-label-md text-primary uppercase tracking-widest border-b border-outline-variant/10 pb-2">
+                    Pricing Ledger
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-on-surface-variant">Merchandise Subtotal</span>
+                      <span className="font-bold text-on-surface">${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-on-surface-variant">Carbon-Neutral Shipping</span>
+                      <span className="font-bold text-on-surface">{shippingAmount === 0 ? "Free" : `$${shippingAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-on-surface-variant">Sourcing Duty &amp; Tax</span>
+                      <span className="font-bold text-on-surface">${taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-outline-variant/15 pt-4 font-headline-sm text-headline-sm text-on-surface">
+                      <span>Grand Total</span>
+                      <span className="font-bold text-primary" style={{ color: THEME_COLORS.global.primary }}>
+                        ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Sidebar Right: Tracking & Support */}
+              <div className="lg:col-span-4 space-y-gutter">
+
+                {/* Tracking Timeline */}
+                <OrderTimeline
+                  events={events}
+                  eventsLoading={eventsLoading}
+                  isMock={isMock}
+                  orderDetails={orderDetails}
+                />
+
+
+
+                {/* Support Box */}
+                {renderSupportBox()}
+
               </div>
             </div>
-
-          </div>
-
-          {/* Sidebar Right: Tracking & Support */}
-          <div className="lg:col-span-4 space-y-gutter">
-
-            {/* Tracking Timeline */}
-            {renderTrakingTimeLine()}
-
-            {/* Care CTA */}
-            {renderCareCTA()}
-
-            {/* Support Box */}
-            {renderSupportBox()}
-
-          </div>
-        </div>
+          </>
+        )}
       </main>
 
       {/* Footer */}
@@ -427,9 +433,8 @@ export default function OrderDetailPage({ params }: PageProps) {
         cartItems={cartItems}
         onRemoveItem={(id) => dispatch(removeFromCart(id))}
         onCheckout={() => {
-          alert("Checkout processed safely. Thank you for selecting ethical luxury!");
-          dispatch(clearCart());
           dispatch(setCartOpen(false));
+          router.push("/checkout");
         }}
       />
       <ProfileDialog isOpen={profileOpen} onClose={() => dispatch(setProfileOpen(false))} />

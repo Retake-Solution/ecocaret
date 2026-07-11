@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import ProductAccordion from "@/components/ProductAccordion";
 import ProductVisuals from "@/components/ProductVisuals";
@@ -136,6 +137,7 @@ export default function ProductDetailsClient({
   suggestedProducts,
 }: ProductDetailsClientProps) {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const cartOpen = useAppSelector((state) => state.cart.isOpen);
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const cartItems = useAppSelector((state) => state.cart.items);
@@ -580,9 +582,8 @@ export default function ProductDetailsClient({
         cartItems={cartItems}
         onRemoveItem={(id) => dispatch(removeFromCart(id))}
         onCheckout={() => {
-          alert("Checkout processed safely. Thank you for selecting ethical luxury!");
-          dispatch(clearCart());
           dispatch(setCartOpen(false));
+          router.push("/checkout");
         }}
       />
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProfileDialog from "@/components/ProfileDialog";
@@ -12,6 +13,7 @@ import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 
 export default function OurStoryPage() {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const cartOpen = useAppSelector((state) => state.cart.isOpen);
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const cartItems = useAppSelector((state) => state.cart.items);
@@ -350,7 +352,7 @@ export default function OurStoryPage() {
               {/* Toast Subscription Success Alert */}
               {subscribed && (
                 <div className="bg-secondary text-white px-6 py-3 rounded-full text-label-md font-medium shadow-md transition-opacity animate-bounce max-w-sm mx-auto mt-4">
-                  Thank you for joining the Conscious Circle!
+                  Thank you for joining the Conscious EcoCaret!
                 </div>
               )}
             </div>
@@ -366,9 +368,8 @@ export default function OurStoryPage() {
         cartItems={cartItems}
         onRemoveItem={(id) => dispatch(removeFromCart(id))}
         onCheckout={() => {
-          alert("Checkout processed safely. Thank you for selecting ethical luxury!");
-          dispatch(clearCart());
           dispatch(setCartOpen(false));
+          router.push("/checkout");
         }}
       />
 

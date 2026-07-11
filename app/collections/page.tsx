@@ -2,7 +2,7 @@
 
 import React, { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
@@ -164,6 +164,7 @@ function CollectionsList({
   initialSubCategory: string;
 }) {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const cartOpen = useAppSelector((state) => state.cart.isOpen);
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const cartItems = useAppSelector((state) => state.cart.items);
@@ -414,9 +415,8 @@ function CollectionsList({
         cartItems={cartItems}
         onRemoveItem={(id) => dispatch(removeFromCart(id))}
         onCheckout={() => {
-          alert("Checkout processed safely. Thank you for selecting ethical luxury!");
-          dispatch(clearCart());
           dispatch(setCartOpen(false));
+          router.push("/checkout");
         }}
       />
 
