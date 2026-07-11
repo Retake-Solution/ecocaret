@@ -1,6 +1,24 @@
 import apiClient from './apiClient';
+import axios from 'axios';
 
 import { ApiProduct } from '@/types';
+import type { ProfileUser } from '@/lib/features/profile/profileSlice';
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterCredentials {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface LoginResult {
+  user: ProfileUser;
+  token: string;
+}
 
 export interface ProductFilters {
   category?: string;
@@ -32,6 +50,61 @@ const toQueryParams = (filters?: ProductFilters) => {
   return Object.fromEntries(
     Object.entries(filters).filter(([, value]) => value !== "" && value !== undefined)
   );
+};
+
+export const login = async ({ email, password }: LoginCredentials): Promise<LoginResult> => {
+  try {
+    const response = await apiClient.post('/api/v1/auth/login', {
+      email,
+      password,
+    });
+    const json = response.data;
+
+    if (!json?.success || !json?.data || !json?.token) {
+      throw new Error(json?.message || 'Unable to sign in. Please try again.');
+    }
+
+    return {
+      user: json.data,
+      token: json.token,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Unable to sign in. Please try again.');
+    }
+
+    throw error;
+  }
+};
+
+export const register = async ({
+  name,
+  email,
+  password,
+}: RegisterCredentials): Promise<LoginResult> => {
+  try {
+    const response = await apiClient.post('/api/v1/auth/register', {
+      name,
+      email,
+      password,
+    });
+    const json = response.data;
+
+    if (!json?.success || !json?.data || !json?.token) {
+      throw new Error(json?.message || 'Unable to create account. Please try again.');
+    }
+
+    return {
+      user: json.data,
+      token: json.token,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Unable to create account. Please try again.');
+    }
+
+    throw error;
+  }
 };
 
 export const fetchProductList = async (filters?: ProductFilters): Promise<ProductListResult> => {

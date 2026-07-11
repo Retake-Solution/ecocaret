@@ -28,9 +28,6 @@ export default function OrderHistory() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleViewDetails = (orderId: string) => {
-    alert(`Order details for ${orderId} verified on eco-blockchain ledger.`);
-  };
 
   return (
     <div className="bg-background text-on-surface font-body-md min-h-screen flex flex-col relative overflow-x-hidden selection:bg-secondary-container">

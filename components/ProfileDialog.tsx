@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import SignInForm from "@/components/SignInForm";
+import SignUpForm from "@/components/SignUpForm";
 
 interface ProfileDialogProps {
   isOpen: boolean;
@@ -9,6 +10,9 @@ interface ProfileDialogProps {
 }
 
 export default function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
+  const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-in");
+  const isSignUp = authMode === "sign-up";
+
   return (
     <div
       className={`fixed inset-0 z-[200] transition-opacity duration-300 flex items-center justify-center p-4 ${
@@ -39,27 +43,24 @@ export default function ProfileDialog({ isOpen, onClose }: ProfileDialogProps) {
             person
           </span>
           <h3 className="font-headline-sm text-headline-sm text-on-surface">
-            The Conscious Circle
+            EcoCaret
           </h3>
-          <p className="font-label-sm text-label-sm text-on-surface-variant">
-            Log in to access certified blockchain ledgers, bespoke orders, and
-            private collections.
-          </p>
         </div>
 
-        <SignInForm onSuccess={onClose} />
+        {isSignUp ? (
+          <SignUpForm onSuccess={onClose} />
+        ) : (
+          <SignInForm onSuccess={onClose} />
+        )}
 
         <div className="text-center pt-6 border-t border-outline-variant/20 mt-6">
           <p className="font-label-sm text-label-sm text-on-surface-variant">
-            New to Eco Caret?{" "}
+            {isSignUp ? "Already have an account?" : "New to Eco Caret?"}{" "}
             <button
-              onClick={() => {
-                alert("Registration page coming soon!");
-                onClose();
-              }}
+              onClick={() => setAuthMode(isSignUp ? "sign-in" : "sign-up")}
               className="text-primary hover:underline font-semibold"
             >
-              Create Account
+              {isSignUp ? "Sign In" : "Create Account"}
             </button>
           </p>
         </div>

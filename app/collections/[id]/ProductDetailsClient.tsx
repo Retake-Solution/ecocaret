@@ -182,6 +182,19 @@ export default function ProductDetailsClient({
     selectedPurity,
     selectedMetalColor
   );
+  const primaryStoneWeight = product.totalStoneCaratWeight || primaryStone?.caratWeight || 0;
+  const specificationItems = [
+    {
+      label: "Stone Weight",
+      value: primaryStoneWeight ? `${primaryStoneWeight.toFixed(2)}ct` : "N/A",
+      meta: "Total carat",
+    },
+    {
+      label: "Metal Color",
+      value: selectedMetalColor ? formatLabel(selectedMetalColor) : "N/A",
+      meta: selectedPurity || "Selected option",
+    },
+  ];
 
   const handleAddToBag = () => {
     if (selectedSize === "Select your size") {
@@ -374,41 +387,31 @@ export default function ProductDetailsClient({
                 </div>
               )}
 
-              <div className="mb-8">
-                <h3 className="font-label-md text-label-md uppercase tracking-widest mb-4">
-                  Specification
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    {
-                      label: "Carat",
-                      value: `${(product.totalStoneCaratWeight || primaryStone?.caratWeight || 0).toFixed(2)}ct`,
-                    },
-                    {
-                      label: "Shape",
-                      value: formatLabel(product.shape || primaryStone?.shape || primaryStone?.cut || "N/A"),
-                    },
-                    {
-                      label: "Color / Clarity",
-                      value:
-                        [primaryStone?.color, primaryStone?.clarity].filter(Boolean).join(" / ") ||
-                        "N/A",
-                    },
-                    {
-                      label: "Origin",
-                      value: formatLabel(product.stoneType || primaryStone?.stoneType || "Ethical Origin"),
-                    },
-                  ].map((item) => (
+              <div className="mb-8 overflow-hidden rounded-2xl border border-outline-variant/70 bg-surface-container-low shadow-[0_18px_45px_-28px_rgba(60,153,132,0.45)]">
+                <div className="border-b border-outline-variant/60 bg-surface-container px-5 py-4">
+                      <h3 className="mt-1 font-headline-sm text-headline-sm text-on-surface">
+                        Specification
+                      </h3>
+                </div>
+
+                <div className="grid grid-cols-1 gap-px bg-outline-variant/60 sm:grid-cols-2">
+                  {specificationItems.map((item) => (
                     <div
                       key={item.label}
-                      className="rounded-full border border-outline-variant/50 bg-surface-container-low px-4 py-2"
+                      className="group bg-surface px-5 py-4 transition-colors duration-300 hover:bg-surface-container-lowest"
                     >
-                      <span className="mr-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-                        {item.label}
-                      </span>
-                      <span className="font-label-sm text-label-sm text-on-surface">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-on-surface-variant">
+                          {item.label}
+                        </span>
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary/60 transition-transform duration-300 group-hover:scale-150" />
+                      </div>
+                      <p className="font-label-md text-label-md text-on-surface">
                         {item.value}
-                      </span>
+                      </p>
+                      <p className="mt-1 text-label-sm font-label-sm text-on-surface-variant">
+                        {item.meta}
+                      </p>
                     </div>
                   ))}
                 </div>

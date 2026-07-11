@@ -221,7 +221,7 @@ export default function Header({
         >
           {/* Header */}
           <div className="flex justify-between items-center px-6 py-4 border-b border-outline-variant/20 h-20">
-            <span className="font-[family:var(--font-playfair-display)] text-headline-sm font-semibold tracking-tighter text-primary">
+            <span className="font-display-lg text-headline-sm font-semibold tracking-tighter text-primary">
               Eco Caret
             </span>
             <button
@@ -499,7 +499,7 @@ export default function Header({
       <Link
         href="/"
         style={{ color: THEME_COLORS.global.primary }}
-        className="font-[family:var(--font-playfair-display)] text-headline-md lg:text-display-lg tracking-tighter cursor-pointer font-bold"
+        className="font-display-lg text-headline-md lg:text-display-lg tracking-tighter cursor-pointer font-bold"
       >
         Eco Caret
       </Link>

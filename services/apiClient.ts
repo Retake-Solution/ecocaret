@@ -7,7 +7,15 @@ const apiClient = axios.create({
   }
 });
 
-// You can easily add request/response interceptors here later
-// apiClient.interceptors.request.use(...)
+apiClient.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('eco_caret_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+
+  return config;
+});
 
 export default apiClient;
