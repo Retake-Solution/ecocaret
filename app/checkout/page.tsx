@@ -37,6 +37,7 @@ export default function CheckoutPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
   const [selectedAddressIndex, setSelectedAddressIndex] = useState<number | null>(null);
+  const [idempotencyKey, setIdempotencyKey] = useState<string>("");
 
   // Form State
   const [form, setForm] = useState({
@@ -152,11 +153,23 @@ export default function CheckoutPage() {
       billingAddress: address,
     };
 
-    const idempotencyKey = `req-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    let currentKey = idempotencyKey;
+    if (!currentKey) {
+      if (typeof window !== "undefined" && window.crypto && window.crypto.randomUUID) {
+        currentKey = window.crypto.randomUUID();
+      } else {
+        currentKey = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === "x" ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+      }
+      setIdempotencyKey(currentKey);
+    }
 
     try {
       setSubmitPhase("Transmitting order details...");
-      const result = await placeOrder(payload, idempotencyKey);
+      const result = await placeOrder(payload, currentKey);
       
       setSubmitPhase("Minting ethical sourcing certificates...");
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -164,10 +177,29 @@ export default function CheckoutPage() {
       setOrderNumber(result.data.orderNumber || `ORD-${Date.now()}`);
       setIsSubmitting(false);
       setIsSuccess(true);
+      setIdempotencyKey(""); // Clear on success
       dispatch(clearCart());
     } catch (err: any) {
       setIsSubmitting(false);
-      alert(err.message || "An error occurred while placing your order. Please try again.");
+      const errMsg = err.message || "";
+      if (errMsg.includes("ORDER_IDEMPOTENCY_IN_PROGRESS")) {
+        alert("Your request is being processed. Please wait.");
+      } else if (errMsg.includes("ORDER_INVENTORY_CONFLICT")) {
+        alert("Sorry, one or more items are no longer available.");
+        router.push("/cart");
+      } else if (errMsg.includes("ORDER_IDEMPOTENCY_MISMATCH")) {
+        const newKey = typeof window !== "undefined" && window.crypto && window.crypto.randomUUID
+          ? window.crypto.randomUUID()
+          : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+              const r = (Math.random() * 16) | 0;
+              const v = c === "x" ? r : (r & 0x3) | 0x8;
+              return v.toString(16);
+            });
+        setIdempotencyKey(newKey);
+        alert("Session mismatch. We have refreshed the checkout session, please try placing the order again.");
+      } else {
+        alert(err.message || "An error occurred while placing your order. Please try again.");
+      }
     }
   };
 

@@ -245,11 +245,19 @@ export interface OrderItem {
     purity: string;
     size: string;
     sizeLabel: string;
+    engraving?: string;
   };
   quantity: {
     ordered: number;
+    cancelled: number;
+    shipped: number;
+    fulfilled: number;
+    returned: number;
+    refunded: number;
   };
   pricingSnapshot: {
+    originalUnitPriceMinor: number;
+    productDiscountMinor: number;
     finalUnitPriceMinor: number;
     subtotalMinor: number;
   };
@@ -272,14 +280,35 @@ export interface OrderData {
     shippingMinor: number;
     taxMinor: number;
     totalMinor: number;
+    authorizedMinor?: number;
+    paidMinor: number;
+    refundedMinor?: number;
+    amountDueMinor: number;
     currency: string;
   };
   shippingAddressSnapshot?: AddressInput;
   billingAddressSnapshot?: AddressInput;
   fulfillmentStatus: string;
   paymentStatus: string;
+  reservationStatus?: string;
+  reservationExpiresAt?: string;
+  cancellation?: {
+    status: string;
+    reason: string;
+    requestedAt: string;
+    completedAt: string;
+  } | null;
+  version: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface GetOrdersParams {
+  page?: number;
+  limit?: number;
+  fulfillmentStatus?: string;
+  paymentStatus?: string;
+  search?: string;
 }
 
 export interface GetOrdersResult {
@@ -290,12 +319,14 @@ export interface GetOrdersResult {
     totalPages: number;
     page: number;
     limit: number;
+    hasNextPage?: boolean;
+    hasPreviousPage?: boolean;
   };
 }
 
-export const getOrders = async (): Promise<GetOrdersResult> => {
+export const getOrders = async (params?: GetOrdersParams): Promise<GetOrdersResult> => {
   try {
-    const response = await apiClient.get('/api/v1/orders');
+    const response = await apiClient.get('/api/v1/orders', { params });
     const json = response.data;
     if (!json?.success || !json?.data) {
       throw new Error(json?.message || 'Unable to load orders. Please try again.');
@@ -331,29 +362,32 @@ export const getOrderById = async (id: string): Promise<SingleOrderResult> => {
 };
 
 export interface OrderEvent {
-  id: string;
+  sequence: number;
   type: string;
   createdAt: string;
-  reason?: string;
-  previousValue?: string;
-  newValue?: string;
-  actor?: {
-    type: string;
-  };
-  metadata?: {
-    trackingNumber?: string;
-    [key: string]: any;
-  };
+}
+
+export interface GetOrderEventsParams {
+  afterSequence?: number;
+  limit?: number;
 }
 
 export interface GetOrderEventsResult {
   success: boolean;
   data: OrderEvent[];
+  pagination?: {
+    limit: number;
+    hasMore: boolean;
+    nextAfterSequence: number;
+  };
 }
 
-export const getOrderEvents = async (id: string): Promise<GetOrderEventsResult> => {
+export const getOrderEvents = async (
+  id: string,
+  params?: GetOrderEventsParams
+): Promise<GetOrderEventsResult> => {
   try {
-    const response = await apiClient.get(`/api/v1/orders/${id}/events`);
+    const response = await apiClient.get(`/api/v1/orders/${id}/events`, { params });
     const json = response.data;
     if (!json?.success || !json?.data) {
       throw new Error(json?.message || 'Unable to load order timeline events.');
@@ -362,6 +396,101 @@ export const getOrderEvents = async (id: string): Promise<GetOrderEventsResult> 
   } catch (error) {
     if (axios.isAxiosError(error)) {
       throw new Error(error.response?.data?.message || 'Unable to load order timeline events.');
+    }
+    throw error;
+  }
+};
+
+export interface ShipmentItem {
+  orderItemId: string;
+  quantity: number;
+}
+
+export interface ShipmentData {
+  id: string;
+  shipmentNumber: string;
+  items: ShipmentItem[];
+  carrier: string;
+  service: string;
+  trackingNumber: string;
+  trackingUrl: string;
+  status: string;
+  shippedAt: string;
+  estimatedDelivery?: string;
+  deliveredAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GetOrderShipmentsParams {
+  limit?: number;
+  cursor?: string;
+}
+
+export interface GetOrderShipmentsResult {
+  success: boolean;
+  data: ShipmentData[];
+  pagination: {
+    limit: number;
+    hasMore: boolean;
+    nextCursor: string | null;
+  };
+}
+
+export const getOrderShipments = async (
+  id: string,
+  params?: GetOrderShipmentsParams
+): Promise<GetOrderShipmentsResult> => {
+  try {
+    const response = await apiClient.get(`/api/v1/orders/${id}/shipments`, { params });
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || 'Unable to load shipments.');
+    }
+    return json;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Unable to load shipments.');
+    }
+    throw error;
+  }
+};
+
+export interface CancelOrderItemInput {
+  orderItemId: string;
+  quantity: number;
+}
+
+export interface CancelOrderPayload {
+  reason: string;
+  expectedVersion: number;
+  items?: CancelOrderItemInput[];
+}
+
+export interface CancelOrderResult {
+  success: boolean;
+  data: OrderData;
+}
+
+export const cancelOrder = async (
+  id: string,
+  payload: CancelOrderPayload,
+  idempotencyKey: string
+): Promise<CancelOrderResult> => {
+  try {
+    const response = await apiClient.post(`/api/v1/orders/${id}/cancellations`, payload, {
+      headers: {
+        'Idempotency-Key': idempotencyKey,
+      },
+    });
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || 'Unable to cancel order.');
+    }
+    return json;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw new Error(error.response?.data?.message || 'Unable to cancel order.');
     }
     throw error;
   }
