@@ -8,7 +8,7 @@ import Footer from "@/components/Footer";
 import ProfileDialog from "@/components/ProfileDialog";
 import CartDrawer from "@/components/CartDrawer";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
-import { setCartOpen, removeFromCart, clearCart } from "@/lib/features/cart/cartSlice";
+import { setCartOpen, removeFromCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 
 export default function OurStoryPage() {
@@ -108,15 +108,6 @@ export default function OurStoryPage() {
                 </Link>
               </div>
             </div>
-          </div>
-
-          {/* Asymmetric border frame accents */}
-          <div className="absolute bottom-0 right-0 w-1/3 h-24 border-t border-l border-outline-variant/30 hidden lg:block rounded-tl-[60px]" />
-          
-          {/* Scroll Indicator */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-on-surface-variant/40 animate-bounce">
-            <span className="text-[10px] font-bold tracking-widest uppercase">Scroll Down</span>
-            <span className="material-symbols-outlined text-sm">expand_more</span>
           </div>
         </section>
 

@@ -120,53 +120,6 @@ export default function ProductAccordion({
           </div>
         </div>
       </div>
-
-      {/* Sustainability Accordion */}
-      <div className="border-b border-outline-variant/30">
-        <button
-          onClick={() => toggleSection("sustainability")}
-          className="w-full flex items-center justify-between py-5 text-left focus:outline-none group cursor-pointer"
-        >
-          <span className="flex items-center space-x-3 text-on-surface font-semibold font-label-md text-label-md group-hover:text-primary transition-colors">
-            <span className="material-symbols-outlined text-primary/80">eco</span>
-            <span>Ethical Integrity & Sourcing</span>
-          </span>
-          <span className={`material-symbols-outlined text-on-surface-variant transition-transform duration-300 ${openSections.sustainability ? "rotate-180" : ""}`}>
-            expand_more
-          </span>
-        </button>
-        <div className={`grid transition-all duration-300 ease-in-out ${openSections.sustainability ? "grid-rows-[1fr] opacity-100 pb-6" : "grid-rows-[0fr] opacity-0"}`}>
-          <div className="overflow-hidden">
-            <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-4">
-              Eco Caret pieces represent a promise of conflict-free luxury, sustainable sourcing, and minimal carbon footprint.
-            </p>
-            <ul className="space-y-3 font-body-sm text-body-sm text-on-surface-variant">
-              <li className="flex items-start space-x-2.5">
-                <span className="material-symbols-outlined text-primary text-lg mt-0.5">check_circle</span>
-                <div>
-                  <strong className="text-on-surface font-semibold block">100% Conflict-Free Lab Grown Diamonds</strong>
-                  <span>Chemically, physically, and optically identical to mined diamonds, without their ecological cost.</span>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2.5">
-                <span className="material-symbols-outlined text-primary text-lg mt-0.5">check_circle</span>
-                <div>
-                  <strong className="text-on-surface font-semibold block">Recycled Precious Metals</strong>
-                  <span>We exclusively use 100% recycled Gold and Silver to prevent destructive open-cast mining.</span>
-                </div>
-              </li>
-              <li className="flex items-start space-x-2.5">
-                <span className="material-symbols-outlined text-primary text-lg mt-0.5">check_circle</span>
-                <div>
-                  <strong className="text-on-surface font-semibold block">Eco-Conscious Packaging</strong>
-                  <span>Shipped in 100% biodegradable, plastic-free gift packaging made from sustainable wood and hemp fibers.</span>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
       {/* Delivery & Care Accordion */}
       <div className="border-b border-outline-variant/30">
         <button
