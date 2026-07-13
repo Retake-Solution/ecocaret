@@ -21,6 +21,7 @@ import {
   getOrderInvoice,
 } from "@/services/api";
 import { OrderData, OrderEvent, ShipmentData } from "@/types";
+import { useRazorpayPayment } from "@/hooks/useRazorpayPayment";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -126,6 +127,26 @@ export default function OrderDetailPage({ params }: PageProps) {
     setToast({ message, type });
   };
 
+  const paymentFlow = useRazorpayPayment({
+    onPaid: async () => {
+      try {
+        const freshOrder = await getOrderById(id);
+        setLiveOrder(freshOrder.data);
+        showToast("Payment verified successfully.", "success");
+      } catch {
+        showToast("Payment verified. Refresh the order to see the latest ledger.", "success");
+      }
+    },
+    onPending: async () => {
+      try {
+        const freshOrder = await getOrderById(id);
+        setLiveOrder(freshOrder.data);
+      } catch {
+        // The payment poll remains active; a later status check can refresh the order ledger.
+      }
+    },
+  });
+
   useEffect(() => {
     const fetchOrderData = async () => {
       setLoading(true);
@@ -133,8 +154,8 @@ export default function OrderDetailPage({ params }: PageProps) {
       try {
         const orderResult = await getOrderById(id);
         setLiveOrder(orderResult.data);
-      } catch (err: any) {
-        setError(err.message || "Failed to load order provenance.");
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Failed to load order provenance.");
       } finally {
         setLoading(false);
       }
@@ -217,8 +238,9 @@ export default function OrderDetailPage({ params }: PageProps) {
       setEvents([...eventsResult.data].reverse());
       setEventsHasMore(eventsResult.pagination?.hasMore || false);
       setNextAfterSequence(eventsResult.pagination?.nextAfterSequence);
-    } catch (err: any) {
-      if (err.message.includes("version") || err.message.includes("CONFLICT") || err.message.includes("409")) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "";
+      if (errorMessage.includes("version") || errorMessage.includes("CONFLICT") || errorMessage.includes("409")) {
         // Refetch order details automatically
         try {
           const freshOrder = await getOrderById(id);
@@ -228,7 +250,7 @@ export default function OrderDetailPage({ params }: PageProps) {
         }
         setCancelError("Order state was modified. We updated it to the latest version. Please review the changes and confirm again.");
       } else {
-        setCancelError(err.message || "Failed to cancel order.");
+        setCancelError(errorMessage || "Failed to cancel order.");
       }
     } finally {
       setIsCancelling(false);
@@ -329,14 +351,12 @@ export default function OrderDetailPage({ params }: PageProps) {
       window.URL.revokeObjectURL(url);
       
       showToast("Invoice downloaded successfully.", "success");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to download invoice:", error);
       
       let status = 500;
       if (axios.isAxiosError(error)) {
         status = error.response?.status || 500;
-      } else if (error.status) {
-        status = error.status;
       }
 
       if (status === 429) {
@@ -350,6 +370,12 @@ export default function OrderDetailPage({ params }: PageProps) {
       setIsDownloading(false);
     }
   };
+
+  const paymentPrefill = () => ({
+    name: liveOrder.customerSnapshot?.name || liveOrder.shippingAddressSnapshot?.name || "",
+    email: liveOrder.customerSnapshot?.email || "",
+    contact: liveOrder.shippingAddressSnapshot?.phone || "",
+  });
 
   // Status mapping colors & labels
   const normStatus = liveOrder.fulfillmentStatus.toLowerCase();
@@ -456,6 +482,87 @@ export default function OrderDetailPage({ params }: PageProps) {
             </span>
           </button>
         </div>
+      </div>
+    );
+  };
+
+  const renderPaymentActionCard = () => {
+    const needsPayment = liveOrder.totals.amountDueMinor > 0 && normPayment !== "paid";
+    if (!needsPayment && !paymentFlow.payment) return null;
+
+    const actionLabel = paymentFlow.busy
+      ? "Working..."
+      : paymentFlow.payment && ["processing", "authorized", "unknown", "review_required"].includes(paymentFlow.payment.status)
+      ? "Check Payment Status"
+      : paymentFlow.payment && ["requires_action", "created"].includes(paymentFlow.payment.status)
+      ? "Resume Razorpay Checkout"
+      : "Pay with Razorpay";
+
+    const handlePaymentClick = async () => {
+      if (paymentFlow.payment && ["processing", "authorized", "unknown", "review_required"].includes(paymentFlow.payment.status)) {
+        await paymentFlow.resumePayment(id, paymentPrefill());
+        return;
+      }
+      if (paymentFlow.payment && ["requires_action", "created"].includes(paymentFlow.payment.status)) {
+        await paymentFlow.resumePayment(id, paymentPrefill());
+        return;
+      }
+      await paymentFlow.startPayment({ orderId: id, prefill: paymentPrefill() });
+    };
+
+    return (
+      <div className="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 organic-shadow text-sm space-y-4">
+        <div className="flex items-start gap-3">
+          <span className="material-symbols-outlined text-[#3C9984] text-[24px]">account_balance_wallet</span>
+          <div>
+            <h3 className="font-label-md text-label-md text-primary uppercase tracking-widest font-bold">
+              Razorpay Payment
+            </h3>
+            <p className="text-on-surface-variant text-xs leading-relaxed mt-1">
+              Payment is confirmed only after backend verification. Amount and currency come from the order ledger.
+            </p>
+          </div>
+        </div>
+
+        {paymentFlow.payment && (
+          <div className="grid grid-cols-2 gap-3 text-xs border-t border-outline-variant/10 pt-4">
+            <div>
+              <p className="uppercase tracking-wider font-bold text-on-surface-variant">Status</p>
+              <p className="font-bold text-on-surface capitalize">{paymentFlow.payment.status.replace(/_/g, " ")}</p>
+            </div>
+            <div>
+              <p className="uppercase tracking-wider font-bold text-on-surface-variant">Provider</p>
+              <p className="font-bold text-on-surface capitalize">{paymentFlow.payment.provider}</p>
+            </div>
+          </div>
+        )}
+
+        {paymentFlow.message.text && (
+          <p
+            role="status"
+            aria-live="polite"
+            className={`text-xs font-semibold rounded-xl p-3 ${
+              paymentFlow.message.type === "error"
+                ? "bg-error-container/30 text-error"
+                : paymentFlow.message.type === "warning"
+                ? "bg-warning-container/40 text-on-warning-container"
+                : "bg-primary/5 text-primary"
+            }`}
+          >
+            {paymentFlow.message.text}
+          </p>
+        )}
+
+        {needsPayment && (
+          <button
+            type="button"
+            disabled={paymentFlow.busy || paymentFlow.polling}
+            onClick={handlePaymentClick}
+            className="w-full py-3.5 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-full hover:opacity-90 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {paymentFlow.polling ? "Checking Payment..." : actionLabel}
+          </button>
+        )}
       </div>
     );
   };
@@ -652,7 +759,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                     <div className="mt-3 bg-secondary-container/10 border border-secondary/20 rounded-xl p-3 flex items-start gap-2.5 max-w-md">
                       <span className="material-symbols-outlined text-secondary text-sm mt-0.5">border_color</span>
                       <p className="font-label-sm text-label-sm text-secondary font-medium italic">
-                        Engraving: "{item.variantSnapshot.engraving}"
+                        Engraving: &quot;{item.variantSnapshot.engraving}&quot;
                       </p>
                     </div>
                   )}
@@ -688,26 +795,6 @@ export default function OrderDetailPage({ params }: PageProps) {
               </div>
             );
           })}
-        </div>
-      </div>
-    );
-  };
-
-  const renderSupportBox = () => {
-    return (
-      <div className="bg-surface-container-low rounded-xl p-6 border border-outline-variant/20">
-        <h4 className="font-label-md text-label-md text-primary mb-4 font-bold">
-          Concierge Support
-        </h4>
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-[#3C9984] text-[20px]">chat_bubble</span>
-            <span className="font-label-md text-label-md text-on-surface-variant">Live Chat (Available now)</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-[#3C9984] text-[20px]">call</span>
-            <span className="font-label-md text-label-md text-on-surface-variant">+44 20 7946 0123</span>
-          </div>
         </div>
       </div>
     );
@@ -1030,6 +1117,8 @@ export default function OrderDetailPage({ params }: PageProps) {
                 </button>
               )}
             </div>
+
+            {renderPaymentActionCard()}
 
             {/* Tracking Timeline */}
             <OrderTimeline

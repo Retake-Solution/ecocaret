@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
@@ -95,7 +95,7 @@ export default function OrderHistory() {
     hasPreviousPage: false,
   });
 
-  const fetchOrders = async (paramsObj?: GetOrdersParams) => {
+  const fetchOrders = useCallback(async (paramsObj?: GetOrdersParams) => {
     try {
       setError("");
       const params: GetOrdersParams = {
@@ -125,12 +125,12 @@ export default function OrderHistory() {
           hasPreviousPage: result.pagination.hasPreviousPage || false,
         });
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to load order history.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load order history.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [fulfillmentFilter, limit, page, search]);
 
   const handleRetry = () => {
     setLoading(true);
@@ -146,11 +146,15 @@ export default function OrderHistory() {
 
   useEffect(() => {
     if (typeof window !== "undefined" && localStorage.getItem("eco_caret_token")) {
-      fetchOrders({ page, search, fulfillmentStatus: fulfillmentFilter });
+      const timer = window.setTimeout(() => {
+        void fetchOrders({ page, search, fulfillmentStatus: fulfillmentFilter });
+      }, 0);
+      return () => window.clearTimeout(timer);
     } else {
-      setLoading(false);
+      const timer = window.setTimeout(() => setLoading(false), 0);
+      return () => window.clearTimeout(timer);
     }
-  }, [user, page, fulfillmentFilter]);
+  }, [fetchOrders, user, page, search, fulfillmentFilter]);
 
   // Scroll listener for Header solid transition
   useEffect(() => {
@@ -282,7 +286,7 @@ export default function OrderHistory() {
                   <div className="space-y-2">
                     <h4 className="font-playfair text-2xl font-semibold text-on-surface">No Sourcing Records Yet</h4>
                     <p className="text-on-surface-variant text-sm max-w-sm mx-auto leading-relaxed">
-                      You haven't placed any orders yet matching these criteria. Explore our masterfully crafted sustainable jewelry collections to start your journey.
+                      You haven&apos;t placed any orders yet matching these criteria. Explore our masterfully crafted sustainable jewelry collections to start your journey.
                     </p>
                   </div>
                   <Link

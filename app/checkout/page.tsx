@@ -1,16 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProfileDialog from "@/components/ProfileDialog";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
-import { setCartOpen, removeFromCart, clearCart } from "@/lib/features/cart/cartSlice";
+import { clearCart, setCartOpen } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import { THEME_COLORS } from "@/theme/colors";
 import { placeOrder } from "@/services/api";
+import { useRazorpayPayment } from "@/hooks/useRazorpayPayment";
+
+const CHECKOUT_ORDER_STORAGE_KEY = "eco_caret_checkout_order";
 
 const mapCountryCodeToName = (code?: string) => {
   if (!code) return "United Kingdom";
@@ -23,11 +26,32 @@ const mapCountryCodeToName = (code?: string) => {
   return "United Kingdom";
 };
 
+const readStoredCheckoutOrder = () => {
+  if (typeof window === "undefined") return { id: "", number: "" };
+  try {
+    const raw = sessionStorage.getItem(CHECKOUT_ORDER_STORAGE_KEY);
+    if (!raw) return { id: "", number: "" };
+    const parsed = JSON.parse(raw) as { id?: string; number?: string };
+    return { id: parsed.id || "", number: parsed.number || "" };
+  } catch {
+    return { id: "", number: "" };
+  }
+};
+
+const writeStoredCheckoutOrder = (id: string, number: string) => {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(CHECKOUT_ORDER_STORAGE_KEY, JSON.stringify({ id, number }));
+};
+
+const clearStoredCheckoutOrder = () => {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(CHECKOUT_ORDER_STORAGE_KEY);
+};
+
 export default function CheckoutPage() {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const cartItems = useAppSelector((state) => state.cart.items);
-  const cartOpen = useAppSelector((state) => state.cart.isOpen);
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const user = useAppSelector((state) => state.profile.user);
 
@@ -35,13 +59,29 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitPhase, setSubmitPhase] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
-  const [orderNumber, setOrderNumber] = useState("");
+  const storedCheckoutOrder = readStoredCheckoutOrder();
+  const [orderNumber, setOrderNumber] = useState(storedCheckoutOrder.number);
+  const [createdOrderId, setCreatedOrderId] = useState(storedCheckoutOrder.id);
   const [selectedAddressIndex, setSelectedAddressIndex] = useState<number | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState<string>("");
+  const restoredPaymentRef = useRef(false);
+  const paymentFlow = useRazorpayPayment({
+    onPaid: () => {
+      setIsSubmitting(false);
+      setSubmitPhase("");
+      setIsSuccess(true);
+      setIdempotencyKey("");
+      clearStoredCheckoutOrder();
+      dispatch(clearCart());
+    },
+    onPending: () => {
+      setIsSubmitting(false);
+    },
+  });
 
   // Form State
   const [form, setForm] = useState({
-    email: "",
+    email: user?.email || "",
     firstName: "",
     lastName: "",
     address: "",
@@ -52,15 +92,6 @@ export default function CheckoutPage() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (user) {
-      setForm((prev) => ({
-        ...prev,
-        email: prev.email || user.email || "",
-      }));
-    }
-  }, [user]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -77,7 +108,8 @@ export default function CheckoutPage() {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!form.email) newErrors.email = "Email is required";
+    const effectiveEmail = form.email || user?.email || "";
+    if (!effectiveEmail) newErrors.email = "Email is required";
     if (!form.firstName) newErrors.firstName = "First name is required";
     if (!form.lastName) newErrors.lastName = "Last name is required";
     if (!form.address) newErrors.address = "Address is required";
@@ -86,14 +118,40 @@ export default function CheckoutPage() {
     if (!form.phone) newErrors.phone = "Phone number is required";
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return newErrors;
   };
+
+  const getPaymentPrefill = useCallback(() => ({
+    name: `${form.firstName} ${form.lastName}`.trim() || user?.name || "",
+    email: form.email || user?.email || "",
+    contact: form.phone,
+  }), [form.email, form.firstName, form.lastName, form.phone, user?.email, user?.name]);
+
+  useEffect(() => {
+    if (!createdOrderId || restoredPaymentRef.current || isSuccess) return;
+
+    restoredPaymentRef.current = true;
+    const timer = window.setTimeout(() => {
+      void paymentFlow.resumePayment(createdOrderId, getPaymentPrefill());
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [createdOrderId, getPaymentPrefill, isSuccess, paymentFlow]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) {
+    if (createdOrderId) {
+      setIsSubmitting(true);
+      setSubmitPhase("Resuming secure Razorpay payment...");
+      await paymentFlow.startPayment({ orderId: createdOrderId, prefill: getPaymentPrefill() });
+      setIsSubmitting(false);
+      return;
+    }
+
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) {
       // Scroll to the first error
-      const firstErrorKey = Object.keys(errors)[0];
+      const firstErrorKey = Object.keys(validationErrors)[0];
       const element = document.getElementsByName(firstErrorKey)[0];
       if (element) {
         element.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -170,18 +228,20 @@ export default function CheckoutPage() {
     try {
       setSubmitPhase("Transmitting order details...");
       const result = await placeOrder(payload, currentKey);
-      
-      setSubmitPhase("Minting ethical sourcing certificates...");
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      setOrderNumber(result.data.orderNumber || `ORD-${Date.now()}`);
+
+      const nextOrderNumber = result.data.orderNumber || `ORD-${Date.now()}`;
+      setOrderNumber(nextOrderNumber);
+      setCreatedOrderId(result.data.id);
+      writeStoredCheckoutOrder(result.data.id, nextOrderNumber);
+      setSubmitPhase("Opening Razorpay Checkout...");
+      await paymentFlow.startPayment({
+        orderId: result.data.id,
+        prefill: getPaymentPrefill(),
+      });
       setIsSubmitting(false);
-      setIsSuccess(true);
-      setIdempotencyKey(""); // Clear on success
-      dispatch(clearCart());
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsSubmitting(false);
-      const errMsg = err.message || "";
+      const errMsg = err instanceof Error ? err.message : "";
       if (errMsg.includes("ORDER_IDEMPOTENCY_IN_PROGRESS")) {
         alert("Your request is being processed. Please wait.");
       } else if (errMsg.includes("ORDER_INVENTORY_CONFLICT")) {
@@ -198,7 +258,7 @@ export default function CheckoutPage() {
         setIdempotencyKey(newKey);
         alert("Session mismatch. We have refreshed the checkout session, please try placing the order again.");
       } else {
-        alert(err.message || "An error occurred while placing your order. Please try again.");
+        alert(errMsg || "An error occurred while placing your order. Please try again.");
       }
     }
   };
@@ -299,7 +359,7 @@ export default function CheckoutPage() {
                 Securing Order Transaction
               </h2>
               <p className="text-on-surface-variant animate-pulse font-label-sm tracking-wide uppercase text-xs">
-                {submitPhase}
+                {paymentFlow.message.text || submitPhase}
               </p>
             </div>
           </div>
@@ -637,17 +697,57 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
+                <div className="rounded-2xl border border-outline-variant/10 bg-surface-container-lowest p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-primary" style={{ color: THEME_COLORS.global.primary }}>
+                      account_balance_wallet
+                    </span>
+                    <div>
+                      <p className="font-label-md text-label-md font-bold text-on-surface uppercase tracking-wider">
+                        Razorpay Payment
+                      </p>
+                      <p className="text-xs text-on-surface-variant leading-relaxed mt-1">
+                        Pay securely with Razorpay. Eco Caret verifies the payment with the backend before marking your order paid.
+                      </p>
+                    </div>
+                  </div>
+                  {paymentFlow.payment && (
+                    <div className="flex justify-between text-xs border-t border-outline-variant/10 pt-3">
+                      <span className="text-on-surface-variant">Payment Status</span>
+                      <span className="font-bold text-primary uppercase tracking-wider">
+                        {paymentFlow.payment.status.replace(/_/g, " ")}
+                      </span>
+                    </div>
+                  )}
+                  {paymentFlow.message.text && (
+                    <p
+                      role="status"
+                      aria-live="polite"
+                      className={`text-xs font-semibold rounded-xl p-3 ${
+                        paymentFlow.message.type === "error"
+                          ? "bg-error-container/30 text-error"
+                          : paymentFlow.message.type === "warning"
+                          ? "bg-warning-container/40 text-on-warning-container"
+                          : "bg-primary/5 text-primary"
+                      }`}
+                    >
+                      {paymentFlow.message.text}
+                    </p>
+                  )}
+                </div>
+
                 <button
                   type="submit"
+                  disabled={isSubmitting || paymentFlow.busy}
                   onClick={(e) => {
                     e.preventDefault();
                     const formElement = document.querySelector("form");
                     if (formElement) formElement.requestSubmit();
                   }}
-                  className="w-full bg-primary text-on-primary py-4 rounded-full font-label-md text-label-md hover:bg-primary/95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer font-bold tracking-wider shadow-md active:scale-99"
+                  className="w-full bg-primary text-on-primary py-4 rounded-full font-label-md text-label-md hover:bg-primary/95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer font-bold tracking-wider shadow-md active:scale-99 disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{ backgroundColor: THEME_COLORS.global.primary }}
                 >
-                  Place Order
+                  {createdOrderId ? "Resume Razorpay Payment" : "Place Order & Pay"}
                   <span className="material-symbols-outlined text-sm">
                     lock
                   </span>

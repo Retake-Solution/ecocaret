@@ -44,16 +44,19 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
-      setSettingsName(user.name || "");
-      if (user.shippingAddresses && user.shippingAddresses.length > 0) {
-        const addr = user.shippingAddresses[0];
-        const formatted = `${addr.name}\n${addr.line1}${addr.line2 ? `, ${addr.line2}` : ""}\n${addr.city}, ${addr.state} ${addr.postalCode}\n${addr.country}\nPhone: ${addr.phone}`;
-        setSettingsAddress(formatted);
-      } else if (user.residentialAddress) {
-        const addr = user.residentialAddress;
-        const formatted = `${addr.name}\n${addr.line1}${addr.line2 ? `, ${addr.line2}` : ""}\n${addr.city}, ${addr.state} ${addr.postalCode}\n${addr.country}\nPhone: ${addr.phone}`;
-        setSettingsAddress(formatted);
-      }
+      const timer = window.setTimeout(() => {
+        setSettingsName(user.name || "");
+        if (user.shippingAddresses && user.shippingAddresses.length > 0) {
+          const addr = user.shippingAddresses[0];
+          const formatted = `${addr.name}\n${addr.line1}${addr.line2 ? `, ${addr.line2}` : ""}\n${addr.city}, ${addr.state} ${addr.postalCode}\n${addr.country}\nPhone: ${addr.phone}`;
+          setSettingsAddress(formatted);
+        } else if (user.residentialAddress) {
+          const addr = user.residentialAddress;
+          const formatted = `${addr.name}\n${addr.line1}${addr.line2 ? `, ${addr.line2}` : ""}\n${addr.city}, ${addr.state} ${addr.postalCode}\n${addr.country}\nPhone: ${addr.phone}`;
+          setSettingsAddress(formatted);
+        }
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
   }, [user]);
 

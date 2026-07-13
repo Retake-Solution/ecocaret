@@ -18,7 +18,37 @@ import {
   GetOrderShipmentsResult,
   CancelOrderPayload,
   CancelOrderResult,
+  CreatePaymentPayload,
+  CustomerPaymentListResult,
+  CustomerPaymentResult,
+  VerifyRazorpayPayload,
 } from "@/types";
+
+export class ApiRequestError extends Error {
+  status?: number;
+  code?: string;
+
+  constructor(message: string, status?: number, code?: string) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+const getApiError = (error: unknown, fallback: string) => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as { message?: string; code?: string; error?: string } | undefined;
+    return new ApiRequestError(
+      data?.message || fallback,
+      error.response?.status,
+      data?.code || data?.error
+    );
+  }
+
+  if (error instanceof Error) return error;
+  return new Error(fallback);
+};
 
 const toQueryParams = (filters?: ProductFilters) => {
   if (!filters) return undefined;
@@ -45,11 +75,7 @@ export const login = async ({ email, password }: LoginCredentials): Promise<Logi
       token: json.token,
     };
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || "Unable to sign in. Please try again.");
-    }
-
-    throw error;
+    throw getApiError(error, "Unable to sign in. Please try again.");
   }
 };
 
@@ -67,11 +93,7 @@ export const register = async (credentials: RegisterCredentials): Promise<LoginR
       token: json.token,
     };
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || "Unable to create account. Please try again.");
-    }
-
-    throw error;
+    throw getApiError(error, "Unable to create account. Please try again.");
   }
 };
 
@@ -149,10 +171,7 @@ export const placeOrder = async (
     }
     return json;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || "Unable to place order. Please try again.");
-    }
-    throw error;
+    throw getApiError(error, "Unable to place order. Please try again.");
   }
 };
 
@@ -165,10 +184,7 @@ export const getOrders = async (params?: GetOrdersParams): Promise<GetOrdersResu
     }
     return json;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || "Unable to load orders. Please try again.");
-    }
-    throw error;
+    throw getApiError(error, "Unable to load orders. Please try again.");
   }
 };
 
@@ -181,10 +197,7 @@ export const getOrderById = async (id: string): Promise<SingleOrderResult> => {
     }
     return json;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || "Unable to load order details. Please try again.");
-    }
-    throw error;
+    throw getApiError(error, "Unable to load order details. Please try again.");
   }
 };
 
@@ -200,10 +213,7 @@ export const getOrderEvents = async (
     }
     return json;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || "Unable to load order timeline events.");
-    }
-    throw error;
+    throw getApiError(error, "Unable to load order timeline events.");
   }
 };
 
@@ -219,10 +229,7 @@ export const getOrderShipments = async (
     }
     return json;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || "Unable to load shipments.");
-    }
-    throw error;
+    throw getApiError(error, "Unable to load shipments.");
   }
 };
 
@@ -243,10 +250,7 @@ export const cancelOrder = async (
     }
     return json;
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || "Unable to cancel order.");
-    }
-    throw error;
+    throw getApiError(error, "Unable to cancel order.");
   }
 };
 
@@ -254,4 +258,78 @@ export const getOrderInvoice = async (id: string) => {
   return apiClient.get(`/api/v1/orders/${id}/invoice`, {
     responseType: "blob",
   });
+};
+
+export const createRazorpayPayment = async (
+  orderId: string,
+  idempotencyKey: string
+): Promise<CustomerPaymentResult> => {
+  try {
+    const payload: CreatePaymentPayload = {
+      channel: "web",
+      returnPath: "order-status",
+      provider: "razorpay",
+    };
+    const response = await apiClient.post(`/api/v1/orders/${orderId}/payments`, payload, {
+      headers: {
+        "Idempotency-Key": idempotencyKey,
+      },
+    });
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to start payment. Please try again.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to start payment. Please try again.");
+  }
+};
+
+export const listOrderPayments = async (orderId: string): Promise<CustomerPaymentListResult> => {
+  try {
+    const response = await apiClient.get(`/api/v1/orders/${orderId}/payments`);
+    const json = response.data;
+    if (!json?.success || !Array.isArray(json.data)) {
+      throw new Error(json?.message || "Unable to load payment attempts.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to load payment attempts.");
+  }
+};
+
+export const getOrderPayment = async (
+  orderId: string,
+  paymentId: string
+): Promise<CustomerPaymentResult> => {
+  try {
+    const response = await apiClient.get(`/api/v1/orders/${orderId}/payments/${paymentId}`);
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to load payment status.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to load payment status.");
+  }
+};
+
+export const verifyRazorpayPayment = async (
+  orderId: string,
+  paymentId: string,
+  payload: VerifyRazorpayPayload
+): Promise<CustomerPaymentResult> => {
+  try {
+    const response = await apiClient.post(
+      `/api/v1/orders/${orderId}/payments/${paymentId}/verify-razorpay`,
+      payload
+    );
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to verify payment.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to verify payment.");
+  }
 };

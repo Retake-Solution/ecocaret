@@ -90,7 +90,7 @@ export interface PlaceOrderResult {
       name: string;
       email: string;
     };
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -189,6 +189,65 @@ export interface GetOrdersResult {
 export interface SingleOrderResult {
   success: boolean;
   data: OrderData;
+}
+
+export type PaymentProvider = "stripe" | "razorpay";
+
+export type CustomerPaymentStatus =
+  | "created"
+  | "requires_action"
+  | "processing"
+  | "authorized"
+  | "paid"
+  | "failed"
+  | "cancelled"
+  | "expired"
+  | "unknown"
+  | "review_required";
+
+export interface RazorpayCheckoutAction {
+  type: "razorpay_checkout";
+  keyId: string;
+  providerOrderId: string;
+  amountMinor: number;
+  currency: "USD";
+  merchantName: string;
+}
+
+export interface CustomerPayment {
+  id: string;
+  orderId: string;
+  provider: PaymentProvider;
+  status: CustomerPaymentStatus;
+  amountMinor: number;
+  currency: "USD";
+  captureMethod: "automatic" | "manual";
+  expiresAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  clientAction?: RazorpayCheckoutAction | { type: "stripe_elements"; clientSecret: string; publishableKey: string };
+}
+
+export interface CreatePaymentPayload {
+  channel: "web";
+  returnPath: "order-status";
+  provider: "razorpay";
+}
+
+export interface CustomerPaymentResult {
+  success: boolean;
+  data: CustomerPayment;
+}
+
+export interface CustomerPaymentListResult {
+  success: boolean;
+  data: CustomerPayment[];
+}
+
+export interface VerifyRazorpayPayload {
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
 }
 
 export interface OrderEvent {
