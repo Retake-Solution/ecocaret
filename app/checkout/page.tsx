@@ -54,6 +54,12 @@ export default function CheckoutPage() {
   const cartItems = useAppSelector((state) => state.cart.items);
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const user = useAppSelector((state) => state.profile.user);
+  const token = useAppSelector((state) => state.profile.token);
+  const isLoggedIn = Boolean(
+    user ||
+    token ||
+    (typeof window !== "undefined" && localStorage.getItem("eco_caret_token"))
+  );
 
   const [scrolled, setScrolled] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -128,7 +134,7 @@ export default function CheckoutPage() {
   }), [form.email, form.firstName, form.lastName, form.phone, user?.email, user?.name]);
 
   useEffect(() => {
-    if (!createdOrderId || restoredPaymentRef.current || isSuccess) return;
+    if (!isLoggedIn || !createdOrderId || restoredPaymentRef.current || isSuccess) return;
 
     restoredPaymentRef.current = true;
     const timer = window.setTimeout(() => {
@@ -136,7 +142,7 @@ export default function CheckoutPage() {
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, [createdOrderId, getPaymentPrefill, isSuccess, paymentFlow]);
+  }, [createdOrderId, getPaymentPrefill, isLoggedIn, isSuccess, paymentFlow]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -292,7 +298,34 @@ export default function CheckoutPage() {
       />
 
       <main className="flex-grow max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-16 pt-28 w-full">
-        {isSuccess ? (
+        {!isLoggedIn ? (
+          <div className="max-w-2xl mx-auto py-16 md:py-24">
+            <div className="rounded-3xl border border-primary/20 bg-primary/5 p-8 md:p-10 text-center space-y-6 shadow-sm">
+              <span
+                className="material-symbols-outlined text-6xl text-primary"
+                style={{ color: THEME_COLORS.global.primary }}
+              >
+                lock_person
+              </span>
+              <div className="space-y-3">
+                <h1 className="font-headline-lg text-headline-lg text-on-surface font-bold">
+                  Login required
+                </h1>
+                <p className="text-on-surface-variant font-body-md text-body-md max-w-lg mx-auto leading-relaxed">
+                  Please sign in before checkout so we can reserve inventory and verify payment securely.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => dispatch(setProfileOpen(true))}
+                className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold uppercase tracking-wider hover:bg-primary/90 transition-all cursor-pointer"
+                style={{ backgroundColor: THEME_COLORS.global.primary }}
+              >
+                Sign In / Register
+              </button>
+            </div>
+          </div>
+        ) : isSuccess ? (
           /* Order Confirmation Screen */
           <div className="max-w-2xl mx-auto text-center py-12 md:py-20 space-y-8">
             <span className="material-symbols-outlined text-7xl bg-primary-container/20 p-6 rounded-full inline-block animate-pulse" style={{ color: THEME_COLORS.global.primary }}>
