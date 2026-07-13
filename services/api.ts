@@ -1,62 +1,24 @@
-import apiClient from './apiClient';
-import axios from 'axios';
-
-import { ApiProduct } from '@/types';
-import type { ProfileUser } from '@/lib/features/profile/profileSlice';
-
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export interface AddressInput {
-  name: string;
-  line1: string;
-  line2?: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-  phone: string;
-  isDefault?: boolean;
-}
-
-export interface RegisterCredentials {
-  name: string;
-  email: string;
-  password: string;
-  residentialAddress: AddressInput;
-  shippingAddresses: AddressInput[];
-}
-
-export interface LoginResult {
-  user: ProfileUser;
-  token: string;
-}
-
-export interface ProductFilters {
-  category?: string;
-  subCategory?: string;
-  collection?: string;
-  metalType?: string;
-  metalColor?: string;
-  purity?: string;
-  gender?: string;
-  shape?: string;
-  stoneType?: string;
-  minPrice?: string;
-  maxPrice?: string;
-  sort?: string;
-  page?: number;
-  limit?: number;
-}
-
-export interface ProductListResult {
-  products: ApiProduct[];
-  total: number;
-  page: number;
-  limit: number;
-}
+import apiClient from "./apiClient";
+import axios from "axios";
+import {
+  ApiProduct,
+  LoginCredentials,
+  RegisterCredentials,
+  LoginResult,
+  ProductFilters,
+  ProductListResult,
+  PlaceOrderPayload,
+  PlaceOrderResult,
+  GetOrdersParams,
+  GetOrdersResult,
+  SingleOrderResult,
+  GetOrderEventsParams,
+  GetOrderEventsResult,
+  GetOrderShipmentsParams,
+  GetOrderShipmentsResult,
+  CancelOrderPayload,
+  CancelOrderResult,
+} from "@/types";
 
 const toQueryParams = (filters?: ProductFilters) => {
   if (!filters) return undefined;
@@ -68,14 +30,14 @@ const toQueryParams = (filters?: ProductFilters) => {
 
 export const login = async ({ email, password }: LoginCredentials): Promise<LoginResult> => {
   try {
-    const response = await apiClient.post('/api/v1/auth/login', {
+    const response = await apiClient.post("/api/v1/auth/login", {
       email,
       password,
     });
     const json = response.data;
 
     if (!json?.success || !json?.data || !json?.token) {
-      throw new Error(json?.message || 'Unable to sign in. Please try again.');
+      throw new Error(json?.message || "Unable to sign in. Please try again.");
     }
 
     return {
@@ -84,7 +46,7 @@ export const login = async ({ email, password }: LoginCredentials): Promise<Logi
     };
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Unable to sign in. Please try again.');
+      throw new Error(error.response?.data?.message || "Unable to sign in. Please try again.");
     }
 
     throw error;
@@ -93,11 +55,11 @@ export const login = async ({ email, password }: LoginCredentials): Promise<Logi
 
 export const register = async (credentials: RegisterCredentials): Promise<LoginResult> => {
   try {
-    const response = await apiClient.post('/api/v1/auth/register', credentials);
+    const response = await apiClient.post("/api/v1/auth/register", credentials);
     const json = response.data;
 
     if (!json?.success || !json?.data || !json?.token) {
-      throw new Error(json?.message || 'Unable to create account. Please try again.');
+      throw new Error(json?.message || "Unable to create account. Please try again.");
     }
 
     return {
@@ -106,7 +68,7 @@ export const register = async (credentials: RegisterCredentials): Promise<LoginR
     };
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Unable to create account. Please try again.');
+      throw new Error(error.response?.data?.message || "Unable to create account. Please try again.");
     }
 
     throw error;
@@ -115,7 +77,7 @@ export const register = async (credentials: RegisterCredentials): Promise<LoginR
 
 export const fetchProductList = async (filters?: ProductFilters): Promise<ProductListResult> => {
   try {
-    const response = await apiClient.get('/api/v1/products', {
+    const response = await apiClient.get("/api/v1/products", {
       params: toQueryParams(filters),
     });
     const json = response.data;
@@ -142,7 +104,7 @@ export const fetchProductList = async (filters?: ProductFilters): Promise<Produc
       limit: filters?.limit ?? 20,
     };
   } catch (error) {
-    console.error('Failed to fetch products:', error);
+    console.error("Failed to fetch products:", error);
     return {
       products: [],
       total: 0,
@@ -171,216 +133,60 @@ export const fetchProductById = async (id: string): Promise<ApiProduct | null> =
   }
 };
 
-export interface OrderAddress {
-  name: string;
-  line1: string;
-  city: string;
-  state?: string;
-  postalCode: string;
-  country: string;
-  phone: string;
-}
-
-export interface OrderItemInput {
-  productId: string;
-  metalType: string;
-  metalColor: string;
-  purity: string;
-  size: string;
-  quantity: number;
-}
-
-export interface PlaceOrderPayload {
-  items: OrderItemInput[];
-  shippingAddress: OrderAddress;
-  billingAddress: OrderAddress;
-}
-
-export interface PlaceOrderResult {
-  success: boolean;
-  data: {
-    id: string;
-    orderNumber: string;
-    customerSnapshot?: {
-      name: string;
-      email: string;
-    };
-    [key: string]: any;
-  };
-}
-
 export const placeOrder = async (
   payload: PlaceOrderPayload,
   idempotencyKey: string
 ): Promise<PlaceOrderResult> => {
   try {
-    const response = await apiClient.post('/api/v1/orders', payload, {
+    const response = await apiClient.post("/api/v1/orders", payload, {
       headers: {
-        'Idempotency-Key': idempotencyKey,
+        "Idempotency-Key": idempotencyKey,
       },
     });
     const json = response.data;
     if (!json?.success || !json?.data) {
-      throw new Error(json?.message || 'Unable to place order. Please try again.');
+      throw new Error(json?.message || "Unable to place order. Please try again.");
     }
     return json;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Unable to place order. Please try again.');
+      throw new Error(error.response?.data?.message || "Unable to place order. Please try again.");
     }
     throw error;
   }
 };
-
-export interface OrderItem {
-  productSnapshot: {
-    name: string;
-    sku: string;
-    slug: string;
-    imageUrl?: string;
-  };
-  variantSnapshot: {
-    metalType: string;
-    metalColor: string;
-    purity: string;
-    size: string;
-    sizeLabel: string;
-    engraving?: string;
-  };
-  quantity: {
-    ordered: number;
-    cancelled: number;
-    shipped: number;
-    fulfilled: number;
-    returned: number;
-    refunded: number;
-  };
-  pricingSnapshot: {
-    originalUnitPriceMinor: number;
-    productDiscountMinor: number;
-    finalUnitPriceMinor: number;
-    subtotalMinor: number;
-  };
-  fulfillmentStatus: string;
-  _id: string;
-}
-
-export interface OrderData {
-  id: string;
-  orderNumber: string;
-  customerSnapshot?: {
-    name: string;
-    email: string;
-  };
-  items: OrderItem[];
-  totals: {
-    merchandiseSubtotalMinor: number;
-    itemDiscountMinor: number;
-    orderDiscountMinor: number;
-    shippingMinor: number;
-    taxMinor: number;
-    totalMinor: number;
-    authorizedMinor?: number;
-    paidMinor: number;
-    refundedMinor?: number;
-    amountDueMinor: number;
-    currency: string;
-  };
-  shippingAddressSnapshot?: AddressInput;
-  billingAddressSnapshot?: AddressInput;
-  fulfillmentStatus: string;
-  paymentStatus: string;
-  reservationStatus?: string;
-  reservationExpiresAt?: string;
-  cancellation?: {
-    status: string;
-    reason: string;
-    requestedAt: string;
-    completedAt: string;
-  } | null;
-  version: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface GetOrdersParams {
-  page?: number;
-  limit?: number;
-  fulfillmentStatus?: string;
-  paymentStatus?: string;
-  search?: string;
-}
-
-export interface GetOrdersResult {
-  success: boolean;
-  data: OrderData[];
-  pagination?: {
-    totalItems: number;
-    totalPages: number;
-    page: number;
-    limit: number;
-    hasNextPage?: boolean;
-    hasPreviousPage?: boolean;
-  };
-}
 
 export const getOrders = async (params?: GetOrdersParams): Promise<GetOrdersResult> => {
   try {
-    const response = await apiClient.get('/api/v1/orders', { params });
+    const response = await apiClient.get("/api/v1/orders", { params });
     const json = response.data;
     if (!json?.success || !json?.data) {
-      throw new Error(json?.message || 'Unable to load orders. Please try again.');
+      throw new Error(json?.message || "Unable to load orders. Please try again.");
     }
     return json;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Unable to load orders. Please try again.');
+      throw new Error(error.response?.data?.message || "Unable to load orders. Please try again.");
     }
     throw error;
   }
 };
-
-export interface SingleOrderResult {
-  success: boolean;
-  data: OrderData;
-}
 
 export const getOrderById = async (id: string): Promise<SingleOrderResult> => {
   try {
     const response = await apiClient.get(`/api/v1/orders/${id}`);
     const json = response.data;
     if (!json?.success || !json?.data) {
-      throw new Error(json?.message || 'Unable to load order details. Please try again.');
+      throw new Error(json?.message || "Unable to load order details. Please try again.");
     }
     return json;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Unable to load order details. Please try again.');
+      throw new Error(error.response?.data?.message || "Unable to load order details. Please try again.");
     }
     throw error;
   }
 };
-
-export interface OrderEvent {
-  sequence: number;
-  type: string;
-  createdAt: string;
-}
-
-export interface GetOrderEventsParams {
-  afterSequence?: number;
-  limit?: number;
-}
-
-export interface GetOrderEventsResult {
-  success: boolean;
-  data: OrderEvent[];
-  pagination?: {
-    limit: number;
-    hasMore: boolean;
-    nextAfterSequence: number;
-  };
-}
 
 export const getOrderEvents = async (
   id: string,
@@ -390,52 +196,16 @@ export const getOrderEvents = async (
     const response = await apiClient.get(`/api/v1/orders/${id}/events`, { params });
     const json = response.data;
     if (!json?.success || !json?.data) {
-      throw new Error(json?.message || 'Unable to load order timeline events.');
+      throw new Error(json?.message || "Unable to load order timeline events.");
     }
     return json;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Unable to load order timeline events.');
+      throw new Error(error.response?.data?.message || "Unable to load order timeline events.");
     }
     throw error;
   }
 };
-
-export interface ShipmentItem {
-  orderItemId: string;
-  quantity: number;
-}
-
-export interface ShipmentData {
-  id: string;
-  shipmentNumber: string;
-  items: ShipmentItem[];
-  carrier: string;
-  service: string;
-  trackingNumber: string;
-  trackingUrl: string;
-  status: string;
-  shippedAt: string;
-  estimatedDelivery?: string;
-  deliveredAt?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface GetOrderShipmentsParams {
-  limit?: number;
-  cursor?: string;
-}
-
-export interface GetOrderShipmentsResult {
-  success: boolean;
-  data: ShipmentData[];
-  pagination: {
-    limit: number;
-    hasMore: boolean;
-    nextCursor: string | null;
-  };
-}
 
 export const getOrderShipments = async (
   id: string,
@@ -445,32 +215,16 @@ export const getOrderShipments = async (
     const response = await apiClient.get(`/api/v1/orders/${id}/shipments`, { params });
     const json = response.data;
     if (!json?.success || !json?.data) {
-      throw new Error(json?.message || 'Unable to load shipments.');
+      throw new Error(json?.message || "Unable to load shipments.");
     }
     return json;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Unable to load shipments.');
+      throw new Error(error.response?.data?.message || "Unable to load shipments.");
     }
     throw error;
   }
 };
-
-export interface CancelOrderItemInput {
-  orderItemId: string;
-  quantity: number;
-}
-
-export interface CancelOrderPayload {
-  reason: string;
-  expectedVersion: number;
-  items?: CancelOrderItemInput[];
-}
-
-export interface CancelOrderResult {
-  success: boolean;
-  data: OrderData;
-}
 
 export const cancelOrder = async (
   id: string,
@@ -480,18 +234,24 @@ export const cancelOrder = async (
   try {
     const response = await apiClient.post(`/api/v1/orders/${id}/cancellations`, payload, {
       headers: {
-        'Idempotency-Key': idempotencyKey,
+        "Idempotency-Key": idempotencyKey,
       },
     });
     const json = response.data;
     if (!json?.success || !json?.data) {
-      throw new Error(json?.message || 'Unable to cancel order.');
+      throw new Error(json?.message || "Unable to cancel order.");
     }
     return json;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Unable to cancel order.');
+      throw new Error(error.response?.data?.message || "Unable to cancel order.");
     }
     throw error;
   }
+};
+
+export const getOrderInvoice = async (id: string) => {
+  return apiClient.get(`/api/v1/orders/${id}/invoice`, {
+    responseType: "blob",
+  });
 };

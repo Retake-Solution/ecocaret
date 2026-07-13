@@ -1,12 +1,11 @@
 "use client";
 
 import React from "react";
-import { OrderEvent } from "@/services/api";
+import { OrderEvent } from "@/types";
 
 interface OrderTimelineProps {
   events: OrderEvent[];
   eventsLoading: boolean;
-  isMock: boolean;
   orderDetails: {
     stepIndex: number;
     number: string;
@@ -19,7 +18,6 @@ interface OrderTimelineProps {
 export default function OrderTimeline({
   events,
   eventsLoading,
-  isMock,
   orderDetails,
   hasMore,
   loadingMore,
@@ -109,102 +107,6 @@ export default function OrderTimeline({
       })
     );
   };
-
-  if (isMock) {
-    return (
-      <div className="bg-surface-container rounded-xl p-8 organic-shadow border border-outline-variant/20">
-        <h3 className="font-label-md text-label-md text-primary uppercase tracking-widest mb-8">
-          Journey Status
-        </h3>
-
-        <div className="relative pl-8 space-y-12">
-          {/* Vertical Line */}
-          <div className="absolute left-[11px] top-0 bottom-0 w-[2px] bg-outline-variant/30"></div>
-          <div
-            className="absolute left-[11px] top-0 w-[2px] timeline-gradient"
-            style={{ height: orderDetails.stepIndex === 4 ? "100%" : "60%" }}
-          ></div>
-
-          {/* Step 1 */}
-          <div className="relative">
-            <div className="absolute -left-[29px] w-5 h-5 rounded-full bg-primary ring-4 ring-primary-fixed flex items-center justify-center">
-              <span className="material-symbols-outlined text-white text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                check
-              </span>
-            </div>
-            <div>
-              <p className="font-label-md text-label-md font-bold text-on-surface">Order Placed</p>
-              <p className="font-label-sm text-label-sm text-on-surface-variant">Validated &amp; Signed</p>
-            </div>
-          </div>
-
-          {/* Step 2 */}
-          <div className="relative">
-            <div className="absolute -left-[29px] w-5 h-5 rounded-full bg-primary ring-4 ring-primary-fixed flex items-center justify-center">
-              <span className="material-symbols-outlined text-white text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                check
-              </span>
-            </div>
-            <div>
-              <p className="font-label-md text-label-md font-bold text-on-surface">Crafting &amp; Sourcing</p>
-              <p className="font-label-sm text-label-sm text-on-surface-variant">Sustainable settings casted</p>
-            </div>
-          </div>
-
-          {/* Step 3 */}
-          <div className="relative">
-            {orderDetails.stepIndex === 3 ? (
-              <div className="absolute -left-[29px] w-5 h-5 rounded-full bg-secondary-container animate-pulse flex items-center justify-center">
-                <div className="w-2 h-2 rounded-full bg-secondary"></div>
-              </div>
-            ) : orderDetails.stepIndex > 3 ? (
-              <div className="absolute -left-[29px] w-5 h-5 rounded-full bg-primary ring-4 ring-primary-fixed flex items-center justify-center">
-                <span className="material-symbols-outlined text-white text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  check
-                </span>
-              </div>
-            ) : (
-              <div className="absolute -left-[29px] w-5 h-5 rounded-full bg-outline-variant"></div>
-            )}
-            <div>
-              <p className={`font-label-md text-label-md font-bold ${orderDetails.stepIndex === 3 ? "text-primary" : "text-on-surface"}`}>
-                Quality Inspection
-              </p>
-              <p className="font-label-sm text-label-sm text-on-surface-variant">GIA Dossier validation</p>
-            </div>
-          </div>
-
-          {/* Step 4 */}
-          <div className="relative">
-            {orderDetails.stepIndex === 4 ? (
-              <div className="absolute -left-[29px] w-5 h-5 rounded-full bg-primary ring-4 ring-primary-fixed flex items-center justify-center">
-                <span className="material-symbols-outlined text-white text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  check
-                </span>
-              </div>
-            ) : (
-              <div className="absolute -left-[29px] w-5 h-5 rounded-full bg-outline-variant"></div>
-            )}
-            <div>
-              <p className={`font-label-md text-label-md font-bold ${orderDetails.stepIndex === 4 ? "text-primary" : "text-on-surface"}`}>
-                Secure Handover &amp; Shipment
-              </p>
-              <p className="font-label-sm text-label-sm text-on-surface-variant">
-                {orderDetails.stepIndex === 4 ? "Delivered / Handed over" : "Pending dispatch"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={() => alert(`Redirecting to carbon-neutral tracking for ${orderDetails.number}...`)}
-          className="w-full mt-12 py-4 px-6 bg-primary text-white font-label-md text-label-md rounded-lg hover:bg-primary-container transition-all shadow-sm active:scale-[0.98] cursor-pointer"
-        >
-          Track Detailed Shipment
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-surface-container rounded-xl p-8 organic-shadow border border-outline-variant/20">

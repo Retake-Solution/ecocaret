@@ -11,7 +11,8 @@ import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { setCartOpen, removeFromCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import { THEME_COLORS } from "@/theme/colors";
-import { getOrders, OrderData, GetOrdersParams } from "@/services/api";
+import { getOrders } from "@/services/api";
+import { OrderData, GetOrdersParams } from "@/types";
 
 const getFulfillmentBadgeDetails = (status: string) => {
   const norm = status.toLowerCase();
@@ -296,7 +297,7 @@ export default function OrderHistory() {
                 <div className="space-y-6 animate-fade-in">
                   {orders.map((order) => {
                     const firstItem = order.items[0];
-                    const imageSrc = firstItem?.productSnapshot?.imageUrl || "https://lh3.googleusercontent.com/aida/AP1WRLurFJQ4iSPdztJ-UpOPfXfi-3UabSzn06tAERclG0j87fz_l9RO3Rd-sBpcuukbwu9XETXjdCAlINMskwEsll7ag5Y9dnuAT0W8yk1inPVRk1Kuj1xlvlm5COlBklKeavfM6oEb1lv7lp_Povi8AY0mqsExyG8uOSsL3B_0YR1mDPDdm_GhdrIW9Fv1v_ZRoqQucwdU5ai6YIF9Bg4Gz5sFLq1GQ1eJaghEnt7209yfkNEM-9NuPMharDM";
+                    const imageSrc = firstItem?.productSnapshot?.imageUrl;
                     const totalAmount = order.totals.totalMinor / 100;
                     
                     const { label: fulfillLabel, color: fulfillColor, bgColor: fulfillBg } = getFulfillmentBadgeDetails(order.fulfillmentStatus);

@@ -12,15 +12,15 @@ import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { setCartOpen, removeFromCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import { THEME_COLORS } from "@/theme/colors";
+import axios from "axios";
 import {
   getOrderById,
   getOrderEvents,
   getOrderShipments,
   cancelOrder,
-  OrderData,
-  OrderEvent,
-  ShipmentData,
+  getOrderInvoice,
 } from "@/services/api";
+import { OrderData, OrderEvent, ShipmentData } from "@/types";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -111,8 +111,20 @@ export default function OrderDetailPage({ params }: PageProps) {
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelError, setCancelError] = useState("");
 
-  const isBracelet = id === "AUR-881045" || id.toLowerCase().includes("bracelet");
-  const isMock = isBracelet || id === "AUR-882910";
+  // Invoice download state
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "warning" } | null>(null);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  const showToast = (message: string, type: "success" | "error" | "warning") => {
+    setToast({ message, type });
+  };
 
   useEffect(() => {
     const fetchOrderData = async () => {
@@ -154,16 +166,10 @@ export default function OrderDetailPage({ params }: PageProps) {
       }
     };
 
-    if (!isMock) {
-      fetchOrderData();
-      fetchEventsData();
-      fetchShipmentsData();
-    } else {
-      setLoading(false);
-      setEventsLoading(false);
-      setShipmentsLoading(false);
-    }
-  }, [id, isMock]);
+    fetchOrderData();
+    fetchEventsData();
+    fetchShipmentsData();
+  }, [id]);
 
   // Scroll listener for Header solid transition
   useEffect(() => {
@@ -229,38 +235,124 @@ export default function OrderDetailPage({ params }: PageProps) {
     }
   };
 
-  const orderDetails = liveOrder
-    ? {
-        number: `#${liveOrder.orderNumber}`,
-        name: liveOrder.items[0]?.productSnapshot?.name || "Bespoke Jewelry Piece",
-        price: `$${(liveOrder.totals.totalMinor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        date: new Date(liveOrder.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
-        deliveryDate: new Date(new Date(liveOrder.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-        specs: `Metal: ${liveOrder.items[0]?.variantSnapshot?.metalType} • Purity: ${liveOrder.items[0]?.variantSnapshot?.purity} • Color: ${liveOrder.items[0]?.variantSnapshot?.metalColor} • Size: ${liveOrder.items[0]?.variantSnapshot?.sizeLabel}`,
-        image: liveOrder.items[0]?.productSnapshot?.imageUrl || "https://lh3.googleusercontent.com/aida/AP1WRLurFJQ4iSPdztJ-UpOPfXfi-3UabSzn06tAERclG0j87fz_l9RO3Rd-sBpcuukbwu9XETXjdCAlINMskwEsll7ag5Y9dnuAT0W8yk1inPVRk1Kuj1xlvlm5COlBklKeavfM6oEb1lv7lp_Povi8AY0mqsExyG8uOSsL3B_0YR1mDPDdm_GhdrIW9Fv1v_ZRoqQucwdU5ai6YIF9Bg4Gz5sFLq1GQ1eJaghEnt7209yfkNEM-9NuPMharDM",
-        stepIndex: getCurrentStepIndex(liveOrder.fulfillmentStatus),
-      }
-    : {
-        number: id.startsWith("#") ? id : `#${id}`,
-        name: isBracelet ? "Sophisticated Diamond Tennis Bracelet" : "Celestia Solitaire Ring",
-        price: isBracelet ? "$12,400.00" : "£14,500.00",
-        date: isBracelet ? "August 12, 2023" : "October 24, 2023",
-        deliveryDate: isBracelet ? "Aug 15" : "Nov 02",
-        specs: isBracelet
-          ? "Metal: Platinum • Length: 7 inches • Diamonds: 8.42ct Princess Cut"
-          : "Metal: Platinum • Size: M • Diamond: 2.05ct Oval",
-        image: isBracelet
-          ? "https://lh3.googleusercontent.com/aida/AP1WRLtNLNOmKIh9k73DJcyIy9iUcOU-b62nNBxxcDn8bd-XG_QjyPZ0LirSv9rfqFPvPwGoD6SP0zr3qoYQLDqWtBo0pndXoWV_Sn5TeqlXilBTjT_JbuvFfwKLuegTeBqEVPZqxwfsqd2Jp9JtSpbfDZmw19WjjrPc8YewJSz8bs7jw3aazoXh9H1hY0mS7FZ8Nv8BGejMkb4vRmUkb3MwD-7fIbzoN_JMu4bszZi6_AuZjsf4mDXmbRHGizs"
-          : "https://lh3.googleusercontent.com/aida/AP1WRLurFJQ4iSPdztJ-UpOPfXfi-3UabSzn06tAERclG0j87fz_l9RO3Rd-sBpcuukbwu9XETXjdCAlINMskwEsll7ag5Y9dnuAT0W8yk1inPVRk1Kuj1xlvlm5COlBklKeavfM6oEb1lv7lp_Povi8AY0mqsExyG8uOSsL3B_0YR1mDPDdm_GhdrIW9Fv1v_ZRoqQucwdU5ai6YIF9Bg4Gz5sFLq1GQ1eJaghEnt7209yfkNEM-9NuPMharDM",
-        stepIndex: isBracelet ? 5 : 3,
-      };
+  if (loading) {
+    return (
+      <div className="bg-background text-on-surface font-body-md min-h-screen flex flex-col relative selection:bg-secondary-container">
+        <Header
+          scrolled={scrolled}
+          setCartOpen={(open) => dispatch(setCartOpen(open))}
+          setProfileOpen={(open) => dispatch(setProfileOpen(open))}
+          cartItemsCount={cartItems.reduce((acc, curr) => acc + curr.quantity, 0)}
+        />
+        <main className="flex-grow max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-12 pt-28 w-full">
+          <div className="flex flex-col items-center justify-center py-32 space-y-4">
+            <div
+              className="w-12 h-12 rounded-full border-4 border-outline-variant/30 border-t-primary animate-spin"
+              style={{ borderTopColor: THEME_COLORS.global.primary }}
+            />
+            <p className="text-on-surface-variant text-sm font-label-md tracking-wider uppercase animate-pulse">
+              Retrieving Provenance Certificate...
+            </p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
-  const handleDownloadInvoice = () => {
-    alert(`Generating invoice receipt for order ${orderDetails.number}...`);
+  if (error || !liveOrder) {
+    return (
+      <div className="bg-background text-on-surface font-body-md min-h-screen flex flex-col relative selection:bg-secondary-container">
+        <Header
+          scrolled={scrolled}
+          setCartOpen={(open) => dispatch(setCartOpen(open))}
+          setProfileOpen={(open) => dispatch(setProfileOpen(open))}
+          cartItemsCount={cartItems.reduce((acc, curr) => acc + curr.quantity, 0)}
+        />
+        <main className="flex-grow max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-12 pt-28 w-full">
+          <div className="p-8 rounded-2xl bg-error-container/40 border border-error/20 text-center max-w-md mx-auto space-y-4">
+            <span className="material-symbols-outlined text-error text-5xl">warning</span>
+            <h3 className="font-playfair text-2xl font-semibold text-on-error-container">
+              Sourcing Ledger Link Failed
+            </h3>
+            <p className="text-on-error-container font-medium text-sm leading-relaxed">{error || "Order not found."}</p>
+            <div className="flex gap-4 justify-center">
+              <Link
+                href="/orders"
+                className="bg-primary text-white px-6 py-2.5 rounded-full text-xs font-bold uppercase hover:bg-secondary transition-all"
+              >
+                Go to History
+              </Link>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  const orderDetails = {
+    number: `#${liveOrder.orderNumber}`,
+    name: liveOrder.items[0]?.productSnapshot?.name,
+    price: `$${(liveOrder.totals.totalMinor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    date: new Date(liveOrder.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+    deliveryDate: new Date(new Date(liveOrder.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    specs: `Metal: ${liveOrder.items[0]?.variantSnapshot?.metalType} • Purity: ${liveOrder.items[0]?.variantSnapshot?.purity} • Color: ${liveOrder.items[0]?.variantSnapshot?.metalColor} • Size: ${liveOrder.items[0]?.variantSnapshot?.sizeLabel || liveOrder.items[0]?.variantSnapshot?.size}`,
+    image: liveOrder.items[0]?.productSnapshot?.imageUrl,
+    stepIndex: getCurrentStepIndex(liveOrder.fulfillmentStatus),
+  };
+
+  const handleDownloadInvoice = async () => {
+    if (isDownloading) return;
+    try {
+      setIsDownloading(true);
+      const response = await getOrderInvoice(id);
+
+      // Create blob link to download
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+
+      // Parse filename from disposition or fallback
+      const disposition = response.headers["content-disposition"];
+      const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+      const matches = filenameRegex.exec(disposition);
+      const filename = (matches && matches[1]) ? matches[1].replace(/['"]/g, "") : `invoice-${liveOrder.orderNumber}.pdf`;
+
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+
+      // Clean up
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      showToast("Invoice downloaded successfully.", "success");
+    } catch (error: any) {
+      console.error("Failed to download invoice:", error);
+      
+      let status = 500;
+      if (axios.isAxiosError(error)) {
+        status = error.response?.status || 500;
+      } else if (error.status) {
+        status = error.status;
+      }
+
+      if (status === 429) {
+        showToast("You are downloading invoices too frequently. Please wait a minute and try again.", "warning");
+      } else if (status === 401 || status === 404) {
+        showToast("Unable to download invoice. Please try logging in again.", "error");
+      } else {
+        showToast("Failed to generate invoice. Please contact support.", "error");
+      }
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   // Status mapping colors & labels
-  const normStatus = (liveOrder?.fulfillmentStatus || (isBracelet ? "shipped" : "processing")).toLowerCase();
+  const normStatus = liveOrder.fulfillmentStatus.toLowerCase();
   const isDelivered = normStatus === "fulfilled" || normStatus === "delivered";
   const isShipped = normStatus === "shipped";
   const isCancelled = normStatus === "cancelled" || normStatus === "refunded";
@@ -292,7 +384,7 @@ export default function OrderDetailPage({ params }: PageProps) {
   }
 
   // Payment status mapping
-  const normPayment = (liveOrder?.paymentStatus || "paid").toLowerCase();
+  const normPayment = liveOrder.paymentStatus.toLowerCase();
   const isPaid = normPayment === "paid" || normPayment === "authorized" || normPayment === "captured";
   let payStatusLabel = "Unpaid";
   let payStatusColor: string = "#71717A";
@@ -308,11 +400,9 @@ export default function OrderDetailPage({ params }: PageProps) {
   }
 
   // Customer cancellations allowed for pre-shipment only
-  const isCancellable =
-    liveOrder &&
-    ["pending", "confirmed", "crafting", "quality_check", "ready_to_ship"].includes(
-      liveOrder.fulfillmentStatus.toLowerCase()
-    );
+  const isCancellable = ["pending", "confirmed", "crafting", "quality_check", "ready_to_ship"].includes(
+    liveOrder.fulfillmentStatus.toLowerCase()
+  );
 
   const renderOrderHeader = () => {
     return (
@@ -345,20 +435,25 @@ export default function OrderDetailPage({ params }: PageProps) {
               <span className="text-[10px] font-extrabold px-4 py-1.5 rounded-full uppercase tracking-wider border" style={{ backgroundColor: payStatusColor + "12", color: payStatusColor, borderColor: payStatusColor + "30" }}>
                 Payment: {payStatusLabel}
               </span>
-              {liveOrder && (
-                <span className="text-[10px] font-extrabold px-4 py-1.5 bg-surface-container-high/60 border border-outline-variant/30 text-on-surface-variant rounded-full uppercase tracking-wider">
-                  Ledger Ver. {liveOrder.version}
-                </span>
-              )}
+              <span className="text-[10px] font-extrabold px-4 py-1.5 bg-surface-container-high/60 border border-outline-variant/30 text-on-surface-variant rounded-full uppercase tracking-wider">
+                Ledger Ver. {liveOrder.version}
+              </span>
             </div>
           </div>
           
           <button
             onClick={handleDownloadInvoice}
-            className="flex items-center gap-2 px-6 py-3.5 bg-surface-container hover:bg-[#3C9984]/10 border border-outline-variant/20 rounded-full font-label-md text-label-md text-secondary hover:text-primary transition-all group cursor-pointer w-full md:w-auto justify-center"
+            disabled={isDownloading}
+            className="flex items-center gap-2 px-6 py-3.5 bg-surface-container hover:bg-[#3C9984]/10 border border-outline-variant/20 rounded-full font-label-md text-label-md text-secondary hover:text-primary transition-all group cursor-pointer w-full md:w-auto justify-center disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">download</span>
-            <span className="font-bold uppercase tracking-wider">Download Certificate</span>
+            {isDownloading ? (
+              <span className="w-5 h-5 rounded-full border-2 border-outline-variant/30 border-t-primary animate-spin" />
+            ) : (
+              <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">download</span>
+            )}
+            <span className="font-bold uppercase tracking-wider">
+              {isDownloading ? "Generating PDF..." : "Download Invoice"}
+            </span>
           </button>
         </div>
       </div>
@@ -366,7 +461,7 @@ export default function OrderDetailPage({ params }: PageProps) {
   };
 
   const renderProgressStepper = () => {
-    const currentStatus = liveOrder?.fulfillmentStatus || (isBracelet ? "shipped" : "crafting");
+    const currentStatus = liveOrder.fulfillmentStatus;
     const stepIndex = getCurrentStepIndex(currentStatus);
     const isCancelled = currentStatus.toLowerCase() === "cancelled";
 
@@ -377,9 +472,9 @@ export default function OrderDetailPage({ params }: PageProps) {
           <div className="space-y-1">
             <h3 className="font-playfair text-xl font-bold text-on-error-container">Order Cancelled</h3>
             <p className="text-on-error-container/80 text-sm">
-              This order was cancelled. {liveOrder?.cancellation?.reason && `Reason: "${liveOrder.cancellation.reason}"`}
+              This order was cancelled. {liveOrder.cancellation?.reason && `Reason: "${liveOrder.cancellation.reason}"`}
             </p>
-            {liveOrder?.cancellation?.completedAt && (
+            {liveOrder.cancellation?.completedAt && (
               <p className="text-xs text-on-error-container/60">
                 Cancelled on {new Date(liveOrder.cancellation.completedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}
               </p>
@@ -489,57 +584,19 @@ export default function OrderDetailPage({ params }: PageProps) {
   };
 
   const renderItemSummary = () => {
-    const items = liveOrder
-      ? liveOrder.items
-      : [
-          {
-            _id: "mock-item-01",
-            productSnapshot: {
-              name: orderDetails.name,
-              imageUrl: orderDetails.image,
-              sku: isBracelet ? "EC-BRC-SOL-02" : "EC-RNG-CEL-10",
-              slug: isBracelet ? "sophisticated-tennis-bracelet" : "celestia-solitaire-ring",
-            },
-            variantSnapshot: {
-              metalType: isBracelet ? "Platinum" : "Gold",
-              metalColor: "White",
-              purity: isBracelet ? "950" : "18K",
-              size: isBracelet ? "7" : "M",
-              sizeLabel: isBracelet ? "7 inches" : "Size M",
-              engraving: "",
-            },
-            quantity: {
-              ordered: 1,
-              cancelled: 0,
-              shipped: isBracelet ? 1 : 0,
-              fulfilled: isBracelet ? 1 : 0,
-              returned: 0,
-              refunded: 0,
-            },
-            pricingSnapshot: {
-              originalUnitPriceMinor: parseFloat(orderDetails.price.replace(/[^\d.]/g, "")) * 100,
-              productDiscountMinor: 0,
-              finalUnitPriceMinor: parseFloat(orderDetails.price.replace(/[^\d.]/g, "")) * 100,
-              subtotalMinor: parseFloat(orderDetails.price.replace(/[^\d.]/g, "")) * 100,
-            },
-            fulfillmentStatus: isBracelet ? "shipped" : "crafting",
-          },
-        ];
-
     return (
       <div className="bg-surface-container-low rounded-3xl p-8 organic-shadow border border-outline-variant/10">
         <h3 className="font-headline-sm text-headline-sm text-primary mb-8">
           Sourced Masterpieces
         </h3>
         <div className="space-y-8">
-          {items.map((item, idx) => {
+          {liveOrder.items.map((item, idx) => {
             const pricing = item.pricingSnapshot;
             const originalPrice = pricing.originalUnitPriceMinor / 100;
             const discount = pricing.productDiscountMinor ? pricing.productDiscountMinor / 100 : 0;
             const finalPrice = pricing.finalUnitPriceMinor / 100;
             const itemSubtotal = pricing.subtotalMinor / 100;
-
-            const imageSrc = item.productSnapshot.imageUrl || "https://lh3.googleusercontent.com/aida/AP1WRLurFJQ4iSPdztJ-UpOPfXfi-3UabSzn06tAERclG0j87fz_l9RO3Rd-sBpcuukbwu9XETXjdCAlINMskwEsll7ag5Y9dnuAT0W8yk1inPVRk1Kuj1xlvlm5COlBklKeavfM6oEb1lv7lp_Povi8AY0mqsExyG8uOSsL3B_0YR1mDPDdm_GhdrIW9Fv1v_ZRoqQucwdU5ai6YIF9Bg4Gz5sFLq1GQ1eJaghEnt7209yfkNEM-9NuPMharDM";
+            const imageSrc = item.productSnapshot.imageUrl;
 
             return (
               <div
@@ -657,8 +714,6 @@ export default function OrderDetailPage({ params }: PageProps) {
   };
 
   const renderShipmentsSection = () => {
-    if (isMock) return null;
-
     return (
       <div className="bg-surface-container-low rounded-3xl p-8 border border-outline-variant/10 organic-shadow">
         <h3 className="font-headline-sm text-headline-sm text-primary mb-6">
@@ -753,7 +808,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {shipment.items.map((item, idx) => {
-                        const orderItem = liveOrder?.items.find((oi) => oi._id === item.orderItemId);
+                        const orderItem = liveOrder.items.find((oi) => oi._id === item.orderItemId);
                         const itemName = orderItem?.productSnapshot.name || "Jewelry Piece";
                         return (
                           <span
@@ -776,18 +831,14 @@ export default function OrderDetailPage({ params }: PageProps) {
   };
 
   // Convert minor units to standard decimals
-  const subtotal = liveOrder
-    ? liveOrder.totals.merchandiseSubtotalMinor / 100
-    : isBracelet
-    ? 12400
-    : 14500;
-  const itemDiscount = liveOrder ? liveOrder.totals.itemDiscountMinor / 100 : 0;
-  const orderDiscount = liveOrder ? liveOrder.totals.orderDiscountMinor / 100 : 0;
-  const shippingAmount = liveOrder ? liveOrder.totals.shippingMinor / 100 : 0;
-  const taxAmount = liveOrder ? liveOrder.totals.taxMinor / 100 : subtotal * 0.08;
-  const totalAmount = liveOrder ? liveOrder.totals.totalMinor / 100 : subtotal + taxAmount;
-  const amountPaid = liveOrder ? liveOrder.totals.paidMinor / 100 : totalAmount;
-  const amountDue = liveOrder ? liveOrder.totals.amountDueMinor / 100 : 0;
+  const subtotal = liveOrder.totals.merchandiseSubtotalMinor / 100;
+  const itemDiscount = liveOrder.totals.itemDiscountMinor / 100;
+  const orderDiscount = liveOrder.totals.orderDiscountMinor / 100;
+  const shippingAmount = liveOrder.totals.shippingMinor / 100;
+  const taxAmount = liveOrder.totals.taxMinor / 100;
+  const totalAmount = liveOrder.totals.totalMinor / 100;
+  const amountPaid = liveOrder.totals.paidMinor / 100;
+  const amountDue = liveOrder.totals.amountDueMinor / 100;
 
   return (
     <div className="bg-background text-on-surface font-body-md min-h-screen flex flex-col relative overflow-x-hidden selection:bg-secondary-container">
@@ -824,207 +875,176 @@ export default function OrderDetailPage({ params }: PageProps) {
 
       {/* Main Content Area */}
       <main className="flex-grow max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-12 pt-28 w-full animate-fade-in">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-32 space-y-4">
-            <div
-              className="w-12 h-12 rounded-full border-4 border-outline-variant/30 border-t-primary animate-spin"
-              style={{ borderTopColor: THEME_COLORS.global.primary }}
-            />
-            <p className="text-on-surface-variant text-sm font-label-md tracking-wider uppercase animate-pulse">
-              Retrieving Provenance Certificate...
-            </p>
-          </div>
-        ) : error ? (
-          <div className="p-8 rounded-2xl bg-error-container/40 border border-error/20 text-center max-w-md mx-auto space-y-4">
-            <span className="material-symbols-outlined text-error text-5xl">warning</span>
-            <h3 className="font-playfair text-2xl font-semibold text-on-error-container">
-              Sourcing Ledger Link Failed
-            </h3>
-            <p className="text-on-error-container font-medium text-sm leading-relaxed">{error}</p>
-            <div className="flex gap-4 justify-center">
-              <Link
-                href="/orders"
-                className="bg-primary text-white px-6 py-2.5 rounded-full text-xs font-bold uppercase hover:bg-secondary transition-all"
-              >
-                Go to History
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Order Header */}
-            {renderOrderHeader()}
+        {/* Order Header */}
+        {renderOrderHeader()}
 
-            {/* Stepper progress visual */}
-            {renderProgressStepper()}
+        {/* Stepper progress visual */}
+        {renderProgressStepper()}
 
-            {/* Bento Layout Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
-              {/* Main Content Left */}
-              <div className="lg:col-span-8 space-y-gutter animate-in fade-in duration-700">
-                {/* Items List */}
-                {renderItemSummary()}
+        {/* Bento Layout Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+          {/* Main Content Left */}
+          <div className="lg:col-span-8 space-y-gutter animate-in fade-in duration-700">
+            {/* Items List */}
+            {renderItemSummary()}
 
-                {/* Sourcing Destination Details */}
-                <div className="bg-surface-container-low rounded-3xl p-8 border border-outline-variant/10 organic-shadow">
-                  <h3 className="font-headline-sm text-headline-sm text-primary mb-6">
-                    Shipping Address
-                  </h3>
-                  {liveOrder?.shippingAddressSnapshot ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm text-on-surface-variant">
-                      <div className="space-y-2">
-                        <p className="text-[10px] uppercase tracking-wider font-extrabold text-secondary">
-                          Delivery Address
-                        </p>
-                        <div className="font-medium text-on-surface space-y-1.5">
-                          <p className="font-bold text-lg text-primary">
-                            {liveOrder.shippingAddressSnapshot.name}
-                          </p>
-                          <p>{liveOrder.shippingAddressSnapshot.line1}</p>
-                          {liveOrder.shippingAddressSnapshot.line2 && (
-                            <p>{liveOrder.shippingAddressSnapshot.line2}</p>
-                          )}
-                          <p>
-                            {liveOrder.shippingAddressSnapshot.city},{" "}
-                            {liveOrder.shippingAddressSnapshot.state}{" "}
-                            {liveOrder.shippingAddressSnapshot.postalCode}
-                          </p>
-                          <p className="uppercase font-extrabold tracking-widest text-[10px] text-[#3C9984] mt-1">
-                            {liveOrder.shippingAddressSnapshot.country}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="space-y-1.5">
-                          <p className="text-[10px] uppercase tracking-wider font-extrabold text-secondary">
-                            Contact Phone
-                          </p>
-                          <p className="font-bold text-on-surface">
-                            {liveOrder.shippingAddressSnapshot.phone}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-on-surface-variant leading-relaxed">
-                      <p className="font-bold text-on-surface">Nirmal Sorathiya</p>
-                      <p>123 Diamond Avenue</p>
-                      <p>London, Greater London NW1 4NP</p>
-                      <p className="uppercase">United Kingdom</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Shipment Section */}
-                {renderShipmentsSection()}
-              </div>
-
-              {/* Sidebar Right */}
-              <div className="lg:col-span-4 space-y-gutter animate-in fade-in duration-700 delay-150">
-                {/* Perforated Luxury Pricing Ledger Card */}
-                <div className="bg-surface-container-low rounded-3xl p-8 border border-outline-variant/10 organic-shadow text-sm space-y-4 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#3C9984] opacity-80"></div>
-                  <h3 className="font-label-md text-label-md text-primary uppercase tracking-widest border-b border-outline-variant/10 pb-4 flex items-center gap-2 font-bold">
-                    <span className="material-symbols-outlined text-[18px]">receipt</span>
-                    Pricing Ledger
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">Merchandise Subtotal</span>
-                      <span className="font-bold text-on-surface">
-                        ${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    {itemDiscount > 0 && (
-                      <div className="flex justify-between text-error font-medium">
-                        <span>Item Discount</span>
-                        <span>
-                          -${itemDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    )}
-                    {orderDiscount > 0 && (
-                      <div className="flex justify-between text-error font-medium">
-                        <span>Order Discount</span>
-                        <span>
-                          -${orderDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">Carbon-Neutral Shipping</span>
-                      <span className="font-bold text-on-surface">
-                        {shippingAmount === 0
-                          ? "Free"
-                          : `$${shippingAmount.toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                            })}`}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">Sourcing Duty &amp; Tax</span>
-                      <span className="font-bold text-on-surface">
-                        ${taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    
-                    {/* Perforated Luxury Dashed Line */}
-                    <div className="border-t border-dashed border-outline-variant/30 my-4 pt-4"></div>
-
-                    <div className="flex justify-between font-playfair text-xl text-on-surface font-bold">
-                      <span>Grand Total</span>
-                      <span className="font-bold text-primary" style={{ color: THEME_COLORS.global.primary }}>
-                        ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                    
-                    <div className="border-t border-outline-variant/10 pt-3 space-y-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-on-surface-variant font-medium">Amount Paid</span>
-                        <span className="font-bold text-on-surface">
-                          ${amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                      <div className="flex justify-between bg-primary/5 p-2.5 rounded-xl border border-primary/10 items-center">
-                        <span className="text-primary font-bold text-xs uppercase tracking-wider">Amount Due</span>
-                        <span className="font-extrabold text-primary text-sm">
-                          ${amountDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
+            {/* Sourcing Destination Details */}
+            <div className="bg-surface-container-low rounded-3xl p-8 border border-outline-variant/10 organic-shadow">
+              <h3 className="font-headline-sm text-headline-sm text-primary mb-6">
+                Shipping Address
+              </h3>
+              {liveOrder.shippingAddressSnapshot ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm text-on-surface-variant">
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase tracking-wider font-extrabold text-secondary">
+                      Delivery Address
+                    </p>
+                    <div className="font-medium text-on-surface space-y-1.5">
+                      <p className="font-bold text-lg text-primary">
+                        {liveOrder.shippingAddressSnapshot.name}
+                      </p>
+                      <p>{liveOrder.shippingAddressSnapshot.line1}</p>
+                      {liveOrder.shippingAddressSnapshot.line2 && (
+                        <p>{liveOrder.shippingAddressSnapshot.line2}</p>
+                      )}
+                      <p>
+                        {liveOrder.shippingAddressSnapshot.city},{" "}
+                        {liveOrder.shippingAddressSnapshot.state}{" "}
+                        {liveOrder.shippingAddressSnapshot.postalCode}
+                      </p>
+                      <p className="uppercase font-extrabold tracking-widest text-[10px] text-[#3C9984] mt-1">
+                        {liveOrder.shippingAddressSnapshot.country}
+                      </p>
                     </div>
                   </div>
-
-                  {isCancellable && (
-                    <button
-                      onClick={() => {
-                        setCancelReason("");
-                        setCancelError("");
-                        setIsCancelOpen(true);
-                      }}
-                      className="mt-6 w-full py-3.5 bg-error/10 hover:bg-error text-error hover:text-white font-bold text-xs uppercase tracking-widest rounded-full transition-all border border-error/30 cursor-pointer active:scale-[0.98]"
-                    >
-                      Cancel Order
-                    </button>
-                  )}
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] uppercase tracking-wider font-extrabold text-secondary">
+                        Contact Phone
+                      </p>
+                      <p className="font-bold text-on-surface">
+                        {liveOrder.shippingAddressSnapshot.phone}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-
-                {/* Tracking Timeline */}
-                <OrderTimeline
-                  events={events}
-                  eventsLoading={eventsLoading}
-                  isMock={isMock}
-                  orderDetails={orderDetails}
-                  hasMore={eventsHasMore}
-                  loadingMore={loadingMoreEvents}
-                  onLoadMore={loadMoreEvents}
-                />
-
-                {/* Support Box */}
-                {renderSupportBox()}
-              </div>
+              ) : (
+                <div className="text-sm text-on-surface-variant leading-relaxed">
+                  <p className="font-bold text-on-surface">Nirmal Sorathiya</p>
+                  <p>123 Diamond Avenue</p>
+                  <p>London, Greater London NW1 4NP</p>
+                  <p className="uppercase">United Kingdom</p>
+                </div>
+              )}
             </div>
-          </>
-        )}
+
+            {/* Shipment Section */}
+            {renderShipmentsSection()}
+          </div>
+
+          {/* Sidebar Right */}
+          <div className="lg:col-span-4 space-y-gutter animate-in fade-in duration-700 delay-150">
+            {/* Perforated Luxury Pricing Ledger Card */}
+            <div className="bg-surface-container-low rounded-3xl p-8 border border-outline-variant/10 organic-shadow text-sm space-y-4 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#3C9984] opacity-80"></div>
+              <h3 className="font-label-md text-label-md text-primary uppercase tracking-widest border-b border-outline-variant/10 pb-4 flex items-center gap-2 font-bold">
+                <span className="material-symbols-outlined text-[18px]">receipt</span>
+                Pricing Ledger
+              </h3>
+              <div className="space-y-4">
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">Merchandise Subtotal</span>
+                  <span className="font-bold text-on-surface">
+                    ${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                {itemDiscount > 0 && (
+                  <div className="flex justify-between text-error font-medium">
+                    <span>Item Discount</span>
+                    <span>
+                      -${itemDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+                {orderDiscount > 0 && (
+                  <div className="flex justify-between text-error font-medium">
+                    <span>Order Discount</span>
+                    <span>
+                      -${orderDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">Shipping</span>
+                  <span className="font-bold text-on-surface">
+                    {shippingAmount === 0
+                      ? "Free"
+                      : `$${shippingAmount.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                        })}`}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">Tax</span>
+                  <span className="font-bold text-on-surface">
+                    ${taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                
+                {/* Perforated Luxury Dashed Line */}
+                <div className="border-t border-dashed border-outline-variant/30 my-4 pt-4"></div>
+
+                <div className="flex justify-between font-playfair text-xl text-on-surface font-bold">
+                  <span>Grand Total</span>
+                  <span className="font-bold text-primary" style={{ color: THEME_COLORS.global.primary }}>
+                    ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                
+                <div className="border-t border-outline-variant/10 pt-3 space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-variant font-medium">Amount Paid</span>
+                    <span className="font-bold text-on-surface">
+                      ${amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between bg-primary/5 p-2.5 rounded-xl border border-primary/10 items-center">
+                    <span className="text-primary font-bold text-xs uppercase tracking-wider">Amount Due</span>
+                    <span className="font-extrabold text-primary text-sm">
+                      ${amountDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {isCancellable && (
+                <button
+                  onClick={() => {
+                    setCancelReason("");
+                    setCancelError("");
+                    setIsCancelOpen(true);
+                  }}
+                  className="mt-6 w-full py-3.5 bg-error/10 hover:bg-error text-error hover:text-white font-bold text-xs uppercase tracking-widest rounded-full transition-all border border-error/30 cursor-pointer active:scale-[0.98]"
+                >
+                  Cancel Order
+                </button>
+              )}
+            </div>
+
+            {/* Tracking Timeline */}
+            <OrderTimeline
+              events={events}
+              eventsLoading={eventsLoading}
+              orderDetails={orderDetails}
+              hasMore={eventsHasMore}
+              loadingMore={loadingMoreEvents}
+              onLoadMore={loadMoreEvents}
+            />
+
+            {/* Support Box */}
+            <SupportBox />
+          </div>
+        </div>
       </main>
 
       {/* Cancel Order Confirmation Modal */}
@@ -1097,6 +1117,47 @@ export default function OrderDetailPage({ params }: PageProps) {
         }}
       />
       <ProfileDialog isOpen={profileOpen} onClose={() => dispatch(setProfileOpen(false))} />
+
+      {/* Custom Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-6 left-6 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
+          <div className={`p-4 rounded-2xl shadow-2xl border flex items-center gap-3 font-semibold text-sm max-w-sm ${
+            toast.type === "error"
+              ? "bg-error-container border-error text-on-error-container"
+              : toast.type === "warning"
+              ? "bg-warning-container border-warning/50 text-on-warning-container"
+              : "bg-primary-container border-primary/50 text-on-primary-container"
+          }`}>
+            <span className="material-symbols-outlined">
+              {toast.type === "error" ? "error" : toast.type === "warning" ? "warning" : "check_circle"}
+            </span>
+            <span>{toast.message}</span>
+            <button onClick={() => setToast(null)} className="ml-auto opacity-60 hover:opacity-100 flex items-center">
+              <span className="material-symbols-outlined text-sm">close</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SupportBox() {
+  return (
+    <div className="bg-surface-container-low rounded-xl p-6 border border-outline-variant/20">
+      <h4 className="font-label-md text-label-md text-primary mb-4 font-bold">
+        Concierge Support
+      </h4>
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <span className="material-symbols-outlined text-[#3C9984] text-[20px]">chat_bubble</span>
+          <span className="font-label-md text-label-md text-on-surface-variant">Live Chat (Available now)</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="material-symbols-outlined text-[#3C9984] text-[20px]">call</span>
+          <span className="font-label-md text-label-md text-on-surface-variant">+44 20 7946 0123</span>
+        </div>
+      </div>
     </div>
   );
 }

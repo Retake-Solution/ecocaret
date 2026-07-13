@@ -179,6 +179,13 @@ export default function ProfilePage() {
                         </button>
                       );
                     })}
+                    <button
+                      onClick={() => setIsLogoutModalOpen(true)}
+                      className="flex items-center gap-3 px-5 py-3.5 rounded-xl font-label-md text-label-md tracking-wider transition-all cursor-pointer whitespace-nowrap lg:w-full text-error hover:bg-error-container/10 mt-2 lg:mt-4 border border-error/15 lg:border-none"
+                    >
+                      <span className="material-symbols-outlined text-lg">logout</span>
+                      <span>LOGOUT</span>
+                    </button>
                   </nav>
 
                   {/* Desktop Quick Stats */}
@@ -313,9 +320,18 @@ export default function ProfilePage() {
                       <h2 className="font-playfair text-3xl font-semibold text-primary">
                         Profile Sourcing Record
                       </h2>
-                      <span className="text-[10px] font-bold px-3 py-1 bg-primary-fixed text-on-primary-fixed-variant rounded-full uppercase tracking-widest">
-                        {roleLabel}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-bold px-3 py-1 bg-primary-fixed text-on-primary-fixed-variant rounded-full uppercase tracking-widest">
+                          {roleLabel}
+                        </span>
+                        <button
+                          onClick={() => setIsLogoutModalOpen(true)}
+                          className="flex items-center gap-1.5 px-4 py-1.5 border border-error/30 text-error hover:bg-error hover:text-white rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-sm">logout</span>
+                          Sign Out
+                        </button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -11,8 +11,8 @@ import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { setCartOpen, removeFromCart, clearCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import { toggleWishlist } from "@/lib/features/wishlist/wishlistSlice";
-import { fetchProductList, ProductFilters } from "@/services/api";
-import { ApiCategory, ApiProduct } from "@/types";
+import { fetchProductList } from "@/services/api";
+import { ApiCategory, ApiProduct, ProductFilters } from "@/types";
 
 const filterOptions = {
   gender: ["men", "women", "unisex"],
