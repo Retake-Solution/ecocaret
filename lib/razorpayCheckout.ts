@@ -8,23 +8,34 @@ export interface RazorpayOptions {
   amount: number;
   currency: string;
   name: string;
+  description?: string;
   prefill?: {
     name?: string;
     email?: string;
     contact?: string;
   };
-  handler: (response: VerifyRazorpayPayload) => void;
+  handler: (response: RazorpayCheckoutSuccessResponse) => void;
   modal?: {
     ondismiss?: () => void;
+  };
+  theme?: {
+    color?: string;
   };
 }
 
 interface RazorpayInstance {
   open: () => void;
+  on?: (event: "payment.failed", handler: () => void) => void;
 }
 
 interface RazorpayConstructor {
   new (options: RazorpayOptions): RazorpayInstance;
+}
+
+interface RazorpayCheckoutSuccessResponse {
+  razorpay_order_id?: string;
+  razorpay_payment_id?: string;
+  razorpay_signature?: string;
 }
 
 declare global {
@@ -34,6 +45,11 @@ declare global {
 }
 
 let razorpayScriptPromise: Promise<void> | null = null;
+
+export type RazorpayCheckoutResult =
+  | { type: "success"; confirmation: VerifyRazorpayPayload }
+  | { type: "dismissed" }
+  | { type: "failed" };
 
 export const loadRazorpayCheckout = () => {
   if (typeof window === "undefined") {
@@ -84,7 +100,7 @@ export const loadRazorpayCheckout = () => {
 export const openRazorpayCheckout = async (
   action: RazorpayCheckoutAction,
   prefill: RazorpayOptions["prefill"],
-  onDismiss: () => void
+  orderReference?: string
 ) => {
   await loadRazorpayCheckout();
 
@@ -93,27 +109,44 @@ export const openRazorpayCheckout = async (
     throw new Error("Razorpay Checkout is unavailable.");
   }
 
-  return new Promise<VerifyRazorpayPayload | null>((resolve) => {
+  return new Promise<RazorpayCheckoutResult>((resolve) => {
     let settled = false;
+    const settle = (result: RazorpayCheckoutResult) => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
+
     const checkout = new Razorpay({
       key: action.keyId,
       order_id: action.providerOrderId,
       amount: action.amountMinor,
       currency: action.currency,
       name: action.merchantName,
+      description: orderReference ? `Eco Caret ${orderReference}` : "Eco Caret order payment",
       prefill,
       handler: (response) => {
-        settled = true;
-        resolve(response);
+        settle({
+          type: "success",
+          confirmation: {
+            razorpayOrderId: response.razorpay_order_id || "",
+            razorpayPaymentId: response.razorpay_payment_id || "",
+            razorpaySignature: response.razorpay_signature || "",
+          },
+        });
       },
       modal: {
         ondismiss: () => {
-          if (!settled) {
-            onDismiss();
-            resolve(null);
-          }
+          settle({ type: "dismissed" });
         },
       },
+      theme: {
+        color: "#3C9984",
+      },
+    });
+
+    checkout.on?.("payment.failed", () => {
+      settle({ type: "failed" });
     });
 
     checkout.open();

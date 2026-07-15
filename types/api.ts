@@ -210,7 +210,7 @@ export interface RazorpayCheckoutAction {
   keyId: string;
   providerOrderId: string;
   amountMinor: number;
-  currency: "USD";
+  currency: string;
   merchantName: string;
 }
 
@@ -220,7 +220,7 @@ export interface CustomerPayment {
   provider: PaymentProvider;
   status: CustomerPaymentStatus;
   amountMinor: number;
-  currency: "USD";
+  currency: string;
   captureMethod: "automatic" | "manual";
   expiresAt?: string;
   createdAt?: string;

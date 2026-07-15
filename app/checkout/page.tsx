@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
@@ -11,9 +11,6 @@ import { clearCart, setCartOpen } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import { THEME_COLORS } from "@/theme/colors";
 import { placeOrder } from "@/services/api";
-import { useRazorpayPayment } from "@/hooks/useRazorpayPayment";
-
-const CHECKOUT_ORDER_STORAGE_KEY = "eco_caret_checkout_order";
 
 const mapCountryCodeToName = (code?: string) => {
   if (!code) return "United Kingdom";
@@ -24,28 +21,6 @@ const mapCountryCodeToName = (code?: string) => {
   if (norm === "FR") return "France";
   if (norm === "DE") return "Germany";
   return "United Kingdom";
-};
-
-const readStoredCheckoutOrder = () => {
-  if (typeof window === "undefined") return { id: "", number: "" };
-  try {
-    const raw = sessionStorage.getItem(CHECKOUT_ORDER_STORAGE_KEY);
-    if (!raw) return { id: "", number: "" };
-    const parsed = JSON.parse(raw) as { id?: string; number?: string };
-    return { id: parsed.id || "", number: parsed.number || "" };
-  } catch {
-    return { id: "", number: "" };
-  }
-};
-
-const writeStoredCheckoutOrder = (id: string, number: string) => {
-  if (typeof window === "undefined") return;
-  sessionStorage.setItem(CHECKOUT_ORDER_STORAGE_KEY, JSON.stringify({ id, number }));
-};
-
-const clearStoredCheckoutOrder = () => {
-  if (typeof window === "undefined") return;
-  sessionStorage.removeItem(CHECKOUT_ORDER_STORAGE_KEY);
 };
 
 export default function CheckoutPage() {
@@ -64,26 +39,8 @@ export default function CheckoutPage() {
   const [scrolled, setScrolled] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitPhase, setSubmitPhase] = useState("");
-  const [isSuccess, setIsSuccess] = useState(false);
-  const storedCheckoutOrder = readStoredCheckoutOrder();
-  const [orderNumber, setOrderNumber] = useState(storedCheckoutOrder.number);
-  const [createdOrderId, setCreatedOrderId] = useState(storedCheckoutOrder.id);
   const [selectedAddressIndex, setSelectedAddressIndex] = useState<number | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState<string>("");
-  const restoredPaymentRef = useRef(false);
-  const paymentFlow = useRazorpayPayment({
-    onPaid: () => {
-      setIsSubmitting(false);
-      setSubmitPhase("");
-      setIsSuccess(true);
-      setIdempotencyKey("");
-      clearStoredCheckoutOrder();
-      dispatch(clearCart());
-    },
-    onPending: () => {
-      setIsSubmitting(false);
-    },
-  });
 
   // Form State
   const [form, setForm] = useState({
@@ -127,32 +84,9 @@ export default function CheckoutPage() {
     return newErrors;
   };
 
-  const getPaymentPrefill = useCallback(() => ({
-    name: `${form.firstName} ${form.lastName}`.trim() || user?.name || "",
-    email: form.email || user?.email || "",
-    contact: form.phone,
-  }), [form.email, form.firstName, form.lastName, form.phone, user?.email, user?.name]);
-
-  useEffect(() => {
-    if (!isLoggedIn || !createdOrderId || restoredPaymentRef.current || isSuccess) return;
-
-    restoredPaymentRef.current = true;
-    const timer = window.setTimeout(() => {
-      void paymentFlow.resumePayment(createdOrderId, getPaymentPrefill());
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, [createdOrderId, getPaymentPrefill, isLoggedIn, isSuccess, paymentFlow]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (createdOrderId) {
-      setIsSubmitting(true);
-      setSubmitPhase("Resuming secure Razorpay payment...");
-      await paymentFlow.startPayment({ orderId: createdOrderId, prefill: getPaymentPrefill() });
-      setIsSubmitting(false);
-      return;
-    }
+    if (isSubmitting) return;
 
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
@@ -235,16 +169,10 @@ export default function CheckoutPage() {
       setSubmitPhase("Transmitting order details...");
       const result = await placeOrder(payload, currentKey);
 
-      const nextOrderNumber = result.data.orderNumber || `ORD-${Date.now()}`;
-      setOrderNumber(nextOrderNumber);
-      setCreatedOrderId(result.data.id);
-      writeStoredCheckoutOrder(result.data.id, nextOrderNumber);
-      setSubmitPhase("Opening Razorpay Checkout...");
-      await paymentFlow.startPayment({
-        orderId: result.data.id,
-        prefill: getPaymentPrefill(),
-      });
-      setIsSubmitting(false);
+      setSubmitPhase("Opening order status...");
+      setIdempotencyKey("");
+      dispatch(clearCart());
+      router.push(`/orders/${result.data.id}`);
     } catch (err: unknown) {
       setIsSubmitting(false);
       const errMsg = err instanceof Error ? err.message : "";
@@ -325,58 +253,6 @@ export default function CheckoutPage() {
               </button>
             </div>
           </div>
-        ) : isSuccess ? (
-          /* Order Confirmation Screen */
-          <div className="max-w-2xl mx-auto text-center py-12 md:py-20 space-y-8">
-            <span className="material-symbols-outlined text-7xl bg-primary-container/20 p-6 rounded-full inline-block animate-pulse" style={{ color: THEME_COLORS.global.primary }}>
-              workspace_premium
-            </span>
-            <div className="space-y-4">
-              <h1 className="font-playfair text-display-md font-bold tracking-tight text-on-surface">
-                Order Completed Successfully
-              </h1>
-              <p className="text-on-surface-variant font-body-lg max-w-lg mx-auto">
-                Thank you for selecting conscious craftsmanship. Your order has been securely processed, and the certificate of origin is registered.
-              </p>
-            </div>
-
-            <div className="checkout-card rounded-2xl p-8 max-w-md mx-auto space-y-4 text-left shadow-sm">
-              <h3 className="font-label-md text-label-md uppercase tracking-wider text-secondary font-bold">
-                Transaction Details
-              </h3>
-              <div className="flex justify-between border-b border-outline-variant/10 pb-2">
-                <span className="text-on-surface-variant">Order Number</span>
-                <span className="font-bold text-on-surface">{orderNumber}</span>
-              </div>
-              <div className="flex justify-between border-b border-outline-variant/10 pb-2">
-                <span className="text-on-surface-variant">Shipping To</span>
-                <span className="font-bold text-on-surface">{form.firstName} {form.lastName}</span>
-              </div>
-              <div className="flex justify-between border-b border-outline-variant/10 pb-2">
-                <span className="text-on-surface-variant">Destination</span>
-                <span className="font-bold text-on-surface">{form.city}, {form.country}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Total Value Paid</span>
-                <span className="font-bold text-primary font-label-md">${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link
-                href="/collections"
-                className="px-8 py-4 bg-primary text-on-primary rounded-full font-label-md text-label-md hover:opacity-90 transition-all text-center font-bold tracking-wider w-full sm:w-auto shadow-md"
-              >
-                Continue Exploring
-              </Link>
-              <Link
-                href="/orders"
-                className="px-8 py-4 border border-outline-variant text-on-surface hover:bg-surface-container rounded-full font-label-md text-label-md transition-all text-center font-bold tracking-wider w-full sm:w-auto"
-              >
-                View Order History
-              </Link>
-            </div>
-          </div>
         ) : isSubmitting ? (
           /* Processing Screen */
           <div className="max-w-md mx-auto text-center py-24 space-y-8">
@@ -392,7 +268,7 @@ export default function CheckoutPage() {
                 Securing Order Transaction
               </h2>
               <p className="text-on-surface-variant animate-pulse font-label-sm tracking-wide uppercase text-xs">
-                {paymentFlow.message.text || submitPhase}
+                {submitPhase}
               </p>
             </div>
           </div>
@@ -671,6 +547,19 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                aria-disabled={isSubmitting}
+                className="lg:hidden w-full bg-primary text-on-primary py-4 rounded-full font-label-md text-label-md hover:bg-primary/95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer font-bold tracking-wider shadow-md active:scale-99 disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ backgroundColor: THEME_COLORS.global.primary }}
+              >
+                {isSubmitting ? "Creating Order..." : "Place Order & Continue to Payment"}
+                <span className="material-symbols-outlined text-sm">
+                  lock
+                </span>
+              </button>
+
             </form>
 
             {/* Right Column: Order Summary */}
@@ -737,50 +626,28 @@ export default function CheckoutPage() {
                     </span>
                     <div>
                       <p className="font-label-md text-label-md font-bold text-on-surface uppercase tracking-wider">
-                        Razorpay Payment
+                        Payment Next
                       </p>
                       <p className="text-xs text-on-surface-variant leading-relaxed mt-1">
-                        Pay securely with Razorpay. Eco Caret verifies the payment with the backend before marking your order paid.
+                        We will create your order first. If payment is required, the order status page will show a clear Pay Now action.
                       </p>
                     </div>
                   </div>
-                  {paymentFlow.payment && (
-                    <div className="flex justify-between text-xs border-t border-outline-variant/10 pt-3">
-                      <span className="text-on-surface-variant">Payment Status</span>
-                      <span className="font-bold text-primary uppercase tracking-wider">
-                        {paymentFlow.payment.status.replace(/_/g, " ")}
-                      </span>
-                    </div>
-                  )}
-                  {paymentFlow.message.text && (
-                    <p
-                      role="status"
-                      aria-live="polite"
-                      className={`text-xs font-semibold rounded-xl p-3 ${
-                        paymentFlow.message.type === "error"
-                          ? "bg-error-container/30 text-error"
-                          : paymentFlow.message.type === "warning"
-                          ? "bg-warning-container/40 text-on-warning-container"
-                          : "bg-primary/5 text-primary"
-                      }`}
-                    >
-                      {paymentFlow.message.text}
-                    </p>
-                  )}
                 </div>
 
                 <button
                   type="submit"
-                  disabled={isSubmitting || paymentFlow.busy}
+                  disabled={isSubmitting}
+                  aria-disabled={isSubmitting}
                   onClick={(e) => {
                     e.preventDefault();
                     const formElement = document.querySelector("form");
                     if (formElement) formElement.requestSubmit();
                   }}
-                  className="w-full bg-primary text-on-primary py-4 rounded-full font-label-md text-label-md hover:bg-primary/95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer font-bold tracking-wider shadow-md active:scale-99 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="hidden lg:flex w-full bg-primary text-on-primary py-4 rounded-full font-label-md text-label-md hover:bg-primary/95 transition-all text-center items-center justify-center gap-2 cursor-pointer font-bold tracking-wider shadow-md active:scale-99 disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{ backgroundColor: THEME_COLORS.global.primary }}
                 >
-                  {createdOrderId ? "Resume Razorpay Payment" : "Place Order & Pay"}
+                  {isSubmitting ? "Creating Order..." : "Place Order & Continue to Payment"}
                   <span className="material-symbols-outlined text-sm">
                     lock
                   </span>

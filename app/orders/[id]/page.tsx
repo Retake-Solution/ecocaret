@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useState, useEffect } from "react";
+import React, { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
@@ -71,6 +71,50 @@ const getShipmentStatusDetails = (status: string) => {
   }
 };
 
+const PAYMENT_ACTION_BLOCKED_STATUSES = new Set([
+  "paid",
+  "not_required",
+  "refunded",
+  "cancelled",
+  "review_required",
+]);
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  created: "Payment required",
+  requires_action: "Payment required",
+  pending: "Payment required",
+  processing: "Payment verification in progress",
+  unknown: "Payment verification in progress",
+  authorized: "Payment authorized",
+  paid: "Paid",
+  captured: "Paid",
+  failed: "Payment failed",
+  cancelled: "Payment cancelled",
+  expired: "Payment session expired",
+  review_required: "Payment requires support review",
+  not_required: "Payment not required",
+  refunded: "Payment refunded",
+};
+
+const formatCurrencyMinor = (amountMinor: number, currency: string) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency || "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amountMinor / 100);
+
+const formatDateTime = (value?: string) => {
+  if (!value) return "Not updated yet";
+  return new Date(value).toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 const generateUUID = () => {
   if (typeof window !== "undefined" && window.crypto && window.crypto.randomUUID) {
     return window.crypto.randomUUID();
@@ -115,6 +159,7 @@ export default function OrderDetailPage({ params }: PageProps) {
   // Invoice download state
   const [isDownloading, setIsDownloading] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "warning" } | null>(null);
+  const [reservationTimeSnapshot, setReservationTimeSnapshot] = useState<number | null>(null);
 
   useEffect(() => {
     if (toast) {
@@ -123,15 +168,28 @@ export default function OrderDetailPage({ params }: PageProps) {
     }
   }, [toast]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setReservationTimeSnapshot(Date.now());
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [liveOrder?.reservationExpiresAt]);
+
   const showToast = (message: string, type: "success" | "error" | "warning") => {
     setToast({ message, type });
   };
 
+  const refreshOrder = useCallback(async () => {
+    const orderResult = await getOrderById(id);
+    setLiveOrder(orderResult.data);
+    return orderResult.data;
+  }, [id]);
+
   const paymentFlow = useRazorpayPayment({
     onPaid: async () => {
       try {
-        const freshOrder = await getOrderById(id);
-        setLiveOrder(freshOrder.data);
+        await refreshOrder();
         showToast("Payment verified successfully.", "success");
       } catch {
         showToast("Payment verified. Refresh the order to see the latest ledger.", "success");
@@ -139,12 +197,19 @@ export default function OrderDetailPage({ params }: PageProps) {
     },
     onPending: async () => {
       try {
-        const freshOrder = await getOrderById(id);
-        setLiveOrder(freshOrder.data);
+        await refreshOrder();
       } catch {
         // The payment poll remains active; a later status check can refresh the order ledger.
       }
     },
+    onTerminal: async () => {
+      try {
+        await refreshOrder();
+      } catch {
+        showToast("Payment status changed. Refresh the order to see the latest ledger.", "warning");
+      }
+    },
+    onOrderRefresh: refreshOrder,
   });
 
   useEffect(() => {
@@ -152,8 +217,7 @@ export default function OrderDetailPage({ params }: PageProps) {
       setLoading(true);
       setError("");
       try {
-        const orderResult = await getOrderById(id);
-        setLiveOrder(orderResult.data);
+        await refreshOrder();
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "Failed to load order provenance.");
       } finally {
@@ -190,7 +254,7 @@ export default function OrderDetailPage({ params }: PageProps) {
     fetchOrderData();
     fetchEventsData();
     fetchShipmentsData();
-  }, [id]);
+  }, [id, refreshOrder]);
 
   // Scroll listener for Header solid transition
   useEffect(() => {
@@ -295,7 +359,7 @@ export default function OrderDetailPage({ params }: PageProps) {
           <div className="p-8 rounded-2xl bg-error-container/40 border border-error/20 text-center max-w-md mx-auto space-y-4">
             <span className="material-symbols-outlined text-error text-5xl">warning</span>
             <h3 className="font-playfair text-2xl font-semibold text-on-error-container">
-              Sourcing Ledger Link Failed
+              Failed
             </h3>
             <p className="text-on-error-container font-medium text-sm leading-relaxed">{error || "Order not found."}</p>
             <div className="flex gap-4 justify-center">
@@ -316,7 +380,7 @@ export default function OrderDetailPage({ params }: PageProps) {
   const orderDetails = {
     number: `#${liveOrder.orderNumber}`,
     name: liveOrder.items[0]?.productSnapshot?.name,
-    price: `$${(liveOrder.totals.totalMinor / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    price: formatCurrencyMinor(liveOrder.totals.totalMinor, liveOrder.totals.currency),
     date: new Date(liveOrder.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
     deliveryDate: new Date(new Date(liveOrder.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     specs: `Metal: ${liveOrder.items[0]?.variantSnapshot?.metalType} • Purity: ${liveOrder.items[0]?.variantSnapshot?.purity} • Color: ${liveOrder.items[0]?.variantSnapshot?.metalColor} • Size: ${liveOrder.items[0]?.variantSnapshot?.sizeLabel || liveOrder.items[0]?.variantSnapshot?.size}`,
@@ -411,12 +475,14 @@ export default function OrderDetailPage({ params }: PageProps) {
 
   // Payment status mapping
   const normPayment = liveOrder.paymentStatus.toLowerCase();
-  const isPaid = normPayment === "paid" || normPayment === "authorized" || normPayment === "captured";
-  let payStatusLabel = "Unpaid";
+  const isPaid = normPayment === "paid" || normPayment === "captured";
+  let payStatusLabel = PAYMENT_STATUS_LABELS[normPayment] || "Payment required";
   let payStatusColor: string = "#71717A";
   if (isPaid) {
     payStatusLabel = "Paid";
     payStatusColor = THEME_COLORS.global.primary;
+  } else if (normPayment === "authorized") {
+    payStatusColor = "#3B82F6";
   } else if (normPayment === "pending") {
     payStatusLabel = "Payment Pending";
     payStatusColor = "#D97706";
@@ -487,55 +553,85 @@ export default function OrderDetailPage({ params }: PageProps) {
   };
 
   const renderPaymentActionCard = () => {
-    const needsPayment = liveOrder.totals.amountDueMinor > 0 && normPayment !== "paid";
-    if (!needsPayment && !paymentFlow.payment) return null;
-
-    const actionLabel = paymentFlow.busy
-      ? "Working..."
-      : paymentFlow.payment && ["processing", "authorized", "unknown", "review_required"].includes(paymentFlow.payment.status)
-      ? "Check Payment Status"
-      : paymentFlow.payment && ["requires_action", "created"].includes(paymentFlow.payment.status)
-      ? "Resume Razorpay Checkout"
-      : "Pay with Razorpay";
+    const paymentState = paymentFlow.payment?.status || normPayment;
+    const paymentLabel = PAYMENT_STATUS_LABELS[paymentState] || paymentState.replace(/_/g, " ");
+    const paymentLastUpdated = paymentFlow.payment?.updatedAt || liveOrder.updatedAt;
+    const amountDueLabel = formatCurrencyMinor(liveOrder.totals.amountDueMinor, liveOrder.totals.currency);
+    const reservationExpired =
+      liveOrder.reservationStatus?.toLowerCase() === "expired" ||
+      Boolean(
+        liveOrder.reservationExpiresAt &&
+        reservationTimeSnapshot !== null &&
+        new Date(liveOrder.reservationExpiresAt).getTime() < reservationTimeSnapshot
+      );
+    const needsPayment =
+      liveOrder.totals.amountDueMinor > 0 &&
+      !PAYMENT_ACTION_BLOCKED_STATUSES.has(normPayment) &&
+      paymentState !== "review_required" &&
+      !reservationExpired;
+    const canClickPayment = needsPayment && !paymentFlow.busy && !paymentFlow.polling;
 
     const handlePaymentClick = async () => {
+      if (!canClickPayment) return;
+      const orderReference = liveOrder.orderNumber ? `order #${liveOrder.orderNumber}` : `order ${id}`;
       if (paymentFlow.payment && ["processing", "authorized", "unknown", "review_required"].includes(paymentFlow.payment.status)) {
-        await paymentFlow.resumePayment(id, paymentPrefill());
+        await paymentFlow.resumePayment(id, paymentPrefill(), orderReference);
         return;
       }
       if (paymentFlow.payment && ["requires_action", "created"].includes(paymentFlow.payment.status)) {
-        await paymentFlow.resumePayment(id, paymentPrefill());
+        await paymentFlow.resumePayment(id, paymentPrefill(), orderReference);
         return;
       }
-      await paymentFlow.startPayment({ orderId: id, prefill: paymentPrefill() });
+      await paymentFlow.startPayment({ orderId: id, prefill: paymentPrefill(), orderReference });
     };
 
     return (
-      <div className="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/10 organic-shadow text-sm space-y-4">
-        <div className="flex items-start gap-3">
-          <span className="material-symbols-outlined text-[#3C9984] text-[24px]">account_balance_wallet</span>
-          <div>
-            <h3 className="font-label-md text-label-md text-primary uppercase tracking-widest font-bold">
-              Razorpay Payment
-            </h3>
-            <p className="text-on-surface-variant text-xs leading-relaxed mt-1">
-              Payment is confirmed only after backend verification. Amount and currency come from the order ledger.
-            </p>
+      <section
+        tabIndex={0}
+        aria-labelledby="payment-section-title"
+        className="bg-surface-container-low rounded-2xl p-6 border border-[#3C9984]/20 organic-shadow text-sm space-y-5 outline-none focus-visible:ring-4 focus-visible:ring-[#3C9984]/25 focus-visible:border-[#3C9984] transition-all"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="min-w-0">
+              <h3
+                id="payment-section-title"
+                className="font-label-md text-label-md text-primary uppercase tracking-widest font-bold"
+              >
+                Payment
+              </h3>
+            </div>
           </div>
+          <span
+            className="text-[10px] font-extrabold px-3 py-1.5 rounded-full uppercase tracking-wider border flex-shrink-0"
+            style={{
+              backgroundColor: needsPayment ? "#3C998414" : "rgba(113, 113, 122, 0.12)",
+              color: needsPayment ? "#3C9984" : "#71717A",
+              borderColor: needsPayment ? "#3C998433" : "rgba(113, 113, 122, 0.24)",
+            }}
+          >
+            {needsPayment ? "Action Needed" : "No Action"}
+          </span>
         </div>
 
-        {paymentFlow.payment && (
-          <div className="grid grid-cols-2 gap-3 text-xs border-t border-outline-variant/10 pt-4">
-            <div>
-              <p className="uppercase tracking-wider font-bold text-on-surface-variant">Status</p>
-              <p className="font-bold text-on-surface capitalize">{paymentFlow.payment.status.replace(/_/g, " ")}</p>
-            </div>
-            <div>
-              <p className="uppercase tracking-wider font-bold text-on-surface-variant">Provider</p>
-              <p className="font-bold text-on-surface capitalize">{paymentFlow.payment.provider}</p>
-            </div>
+        <div className="rounded-2xl bg-[#3C9984]/5 border border-[#3C9984]/15 p-4">
+          <p className="text-[10px] uppercase tracking-wider font-bold text-on-surface-variant">
+            Amount Due
+          </p>
+          <p className="font-headline-sm text-headline-sm font-extrabold text-primary mt-1">
+            {amountDueLabel}
+          </p>
+        </div>
+
+        <div>
+          <div className="bg-surface-container-high/40 border border-outline-variant/10 p-3">
+            <p className="font-bold text-on-surface capitalize mt-1">{paymentLabel}</p>
           </div>
-        )}
+          <div className="bg-surface-container-high/40 border border-outline-variant/10 p-3">
+            <p className="uppercase tracking-wider font-bold text-on-surface-variant">Last Updated</p>
+            <p className="font-bold text-on-surface mt-1">{formatDateTime(paymentLastUpdated)}</p>
+          </div>
+        </div>
 
         {paymentFlow.message.text && (
           <p
@@ -553,17 +649,25 @@ export default function OrderDetailPage({ params }: PageProps) {
           </p>
         )}
 
+        {reservationExpired && (
+          <p role="status" className="text-xs font-semibold rounded-xl p-3 bg-warning-container/40 text-on-warning-container">
+            Payment is disabled because this order reservation expired. Please contact support before trying again.
+          </p>
+        )}
+
         {needsPayment && (
           <button
             type="button"
-            disabled={paymentFlow.busy || paymentFlow.polling}
+            disabled={!canClickPayment}
+            aria-disabled={!canClickPayment}
+            aria-busy={paymentFlow.busy || paymentFlow.polling}
             onClick={handlePaymentClick}
-            className="w-full py-3.5 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-full hover:opacity-90 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3.5 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-full hover:opacity-90 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#3C9984]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
           >
-            {paymentFlow.polling ? "Checking Payment..." : actionLabel}
+            {paymentFlow.polling ? "Checking Payment..." : paymentFlow.busy ? "Preparing Payment..." : "Pay Now"}
           </button>
         )}
-      </div>
+      </section>
     );
   };
 
@@ -699,10 +803,7 @@ export default function OrderDetailPage({ params }: PageProps) {
         <div className="space-y-8">
           {liveOrder.items.map((item, idx) => {
             const pricing = item.pricingSnapshot;
-            const originalPrice = pricing.originalUnitPriceMinor / 100;
-            const discount = pricing.productDiscountMinor ? pricing.productDiscountMinor / 100 : 0;
-            const finalPrice = pricing.finalUnitPriceMinor / 100;
-            const itemSubtotal = pricing.subtotalMinor / 100;
+            const discount = pricing.productDiscountMinor || 0;
             const imageSrc = item.productSnapshot.imageUrl;
 
             return (
@@ -732,11 +833,11 @@ export default function OrderDetailPage({ params }: PageProps) {
                     </div>
                     <div className="text-left sm:text-right">
                       <span className="font-headline-sm text-headline-sm text-primary font-bold">
-                        ${finalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {formatCurrencyMinor(pricing.finalUnitPriceMinor, liveOrder.totals.currency)}
                       </span>
                       {discount > 0 && (
                         <p className="text-xs text-on-surface-variant line-through mt-0.5">
-                          ${originalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          {formatCurrencyMinor(pricing.originalUnitPriceMinor, liveOrder.totals.currency)}
                         </p>
                       )}
                     </div>
@@ -788,7 +889,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-on-surface-variant">Subtotal:</span>
-                      <span className="font-bold text-primary text-base">${itemSubtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="font-bold text-primary text-base">{formatCurrencyMinor(pricing.subtotalMinor, liveOrder.totals.currency)}</span>
                     </div>
                   </div>
                 </div>
@@ -917,15 +1018,7 @@ export default function OrderDetailPage({ params }: PageProps) {
     );
   };
 
-  // Convert minor units to standard decimals
-  const subtotal = liveOrder.totals.merchandiseSubtotalMinor / 100;
-  const itemDiscount = liveOrder.totals.itemDiscountMinor / 100;
-  const orderDiscount = liveOrder.totals.orderDiscountMinor / 100;
-  const shippingAmount = liveOrder.totals.shippingMinor / 100;
-  const taxAmount = liveOrder.totals.taxMinor / 100;
-  const totalAmount = liveOrder.totals.totalMinor / 100;
-  const amountPaid = liveOrder.totals.paidMinor / 100;
-  const amountDue = liveOrder.totals.amountDueMinor / 100;
+  const orderCurrency = liveOrder.totals.currency || "USD";
 
   return (
     <div className="bg-background text-on-surface font-body-md min-h-screen flex flex-col relative overflow-x-hidden selection:bg-secondary-container">
@@ -1040,41 +1133,39 @@ export default function OrderDetailPage({ params }: PageProps) {
               </h3>
               <div className="space-y-4">
                 <div className="flex justify-between">
-                  <span className="text-on-surface-variant">Merchandise Subtotal</span>
+                  <span className="text-on-surface-variant">Subtotal</span>
                   <span className="font-bold text-on-surface">
-                    ${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {formatCurrencyMinor(liveOrder.totals.merchandiseSubtotalMinor, orderCurrency)}
                   </span>
                 </div>
-                {itemDiscount > 0 && (
+                {liveOrder.totals.itemDiscountMinor > 0 && (
                   <div className="flex justify-between text-error font-medium">
                     <span>Item Discount</span>
                     <span>
-                      -${itemDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      -{formatCurrencyMinor(liveOrder.totals.itemDiscountMinor, orderCurrency)}
                     </span>
                   </div>
                 )}
-                {orderDiscount > 0 && (
+                {liveOrder.totals.orderDiscountMinor > 0 && (
                   <div className="flex justify-between text-error font-medium">
                     <span>Order Discount</span>
                     <span>
-                      -${orderDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      -{formatCurrencyMinor(liveOrder.totals.orderDiscountMinor, orderCurrency)}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <span className="text-on-surface-variant">Shipping</span>
                   <span className="font-bold text-on-surface">
-                    {shippingAmount === 0
+                    {liveOrder.totals.shippingMinor === 0
                       ? "Free"
-                      : `$${shippingAmount.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                        })}`}
+                      : formatCurrencyMinor(liveOrder.totals.shippingMinor, orderCurrency)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-on-surface-variant">Tax</span>
                   <span className="font-bold text-on-surface">
-                    ${taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {formatCurrencyMinor(liveOrder.totals.taxMinor, orderCurrency)}
                   </span>
                 </div>
                 
@@ -1084,7 +1175,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                 <div className="flex justify-between font-playfair text-xl text-on-surface font-bold">
                   <span>Grand Total</span>
                   <span className="font-bold text-primary" style={{ color: THEME_COLORS.global.primary }}>
-                    ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {formatCurrencyMinor(liveOrder.totals.totalMinor, orderCurrency)}
                   </span>
                 </div>
                 
@@ -1092,13 +1183,13 @@ export default function OrderDetailPage({ params }: PageProps) {
                   <div className="flex justify-between">
                     <span className="text-on-surface-variant font-medium">Amount Paid</span>
                     <span className="font-bold text-on-surface">
-                      ${amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {formatCurrencyMinor(liveOrder.totals.paidMinor, orderCurrency)}
                     </span>
                   </div>
                   <div className="flex justify-between bg-primary/5 p-2.5 rounded-xl border border-primary/10 items-center">
                     <span className="text-primary font-bold text-xs uppercase tracking-wider">Amount Due</span>
                     <span className="font-extrabold text-primary text-sm">
-                      ${amountDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {formatCurrencyMinor(liveOrder.totals.amountDueMinor, orderCurrency)}
                     </span>
                   </div>
                 </div>

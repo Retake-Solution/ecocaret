@@ -18,11 +18,14 @@ interface OrderTimelineProps {
 export default function OrderTimeline({
   events,
   eventsLoading,
-  orderDetails,
   hasMore,
   loadingMore,
   onLoadMore,
 }: OrderTimelineProps) {
+  const [showAllEvents, setShowAllEvents] = React.useState(false);
+  const visibleEvents = showAllEvents ? events : events.slice(0, 4);
+  const hiddenEventsCount = Math.max(events.length - visibleEvents.length, 0);
+
   const getEventIconAndColor = (type: string) => {
     const norm = type.toLowerCase();
     switch (norm) {
@@ -109,13 +112,20 @@ export default function OrderTimeline({
   };
 
   return (
-    <div className="bg-surface-container rounded-xl p-8 organic-shadow border border-outline-variant/20">
-      <h3 className="font-label-md text-label-md text-primary uppercase tracking-widest mb-8">
-        Order Timeline History
-      </h3>
+    <div className="bg-surface-container rounded-xl p-5 organic-shadow border border-outline-variant/20">
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <h3 className="font-label-md text-label-md text-primary uppercase tracking-widest">
+          Timeline
+        </h3>
+        {!eventsLoading && events.length > 0 && (
+          <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant bg-surface-container-high px-2.5 py-1 rounded-full">
+            {events.length} events
+          </span>
+        )}
+      </div>
 
       {eventsLoading ? (
-        <div className="space-y-8 animate-pulse pl-8 relative">
+        <div className="space-y-5 animate-pulse pl-7 relative">
           <div className="absolute left-[11px] top-0 bottom-0 w-[2px] bg-outline-variant/20"></div>
           {[1, 2].map((i) => (
             <div key={i} className="relative space-y-2">
@@ -130,31 +140,31 @@ export default function OrderTimeline({
           No timeline events recorded yet.
         </p>
       ) : (
-        <div className="space-y-8">
-          <div className="relative pl-8 space-y-8">
-            <div className="absolute left-[11px] top-2 bottom-2 w-[2px] bg-outline-variant/30"></div>
+        <div className="space-y-5">
+          <div className="relative pl-7 space-y-4">
+            <div className="absolute left-[10px] top-2 bottom-2 w-[2px] bg-outline-variant/25"></div>
 
-            {events.map((event) => {
+            {visibleEvents.map((event) => {
               const { icon, color, bgColor } = getEventIconAndColor(event.type);
               const title = getEventTitle(event.type);
 
               return (
                 <div key={event.sequence} className="relative group">
                   <div
-                    className="absolute -left-[35px] w-8 h-8 rounded-full border-2 border-surface flex items-center justify-center shadow-sm z-10"
+                    className="absolute -left-[31px] w-7 h-7 rounded-full border-2 border-surface flex items-center justify-center shadow-sm z-10"
                     style={{ backgroundColor: bgColor, color: color }}
                   >
-                    <span className="material-symbols-outlined text-[16px] font-bold">
+                    <span className="material-symbols-outlined text-[14px] font-bold">
                       {icon}
                     </span>
                   </div>
 
-                  <div className="space-y-1">
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-1">
-                      <p className="font-label-md text-label-md font-bold text-on-surface">
+                  <div className="rounded-xl bg-surface-container-low/70 border border-outline-variant/10 px-3 py-2.5">
+                    <div className="space-y-1">
+                      <p className="font-label-sm text-label-sm font-bold text-on-surface leading-tight">
                         {title}
                       </p>
-                      <span className="text-[10px] text-on-surface-variant font-medium">
+                      <span className="text-[10px] text-on-surface-variant font-semibold">
                         {formatEventDate(event.createdAt)}
                       </span>
                     </div>
@@ -164,15 +174,27 @@ export default function OrderTimeline({
             })}
           </div>
 
-          {hasMore && (
-            <div className="pt-4 flex justify-center">
+          {(hiddenEventsCount > 0 || showAllEvents || hasMore) && (
+            <div className="pt-1 flex flex-col gap-2">
+              {(hiddenEventsCount > 0 || showAllEvents) && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllEvents((current) => !current)}
+                  className="w-full px-4 py-2.5 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/20 text-xs font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer text-on-surface focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#3C9984]/25"
+                >
+                  {showAllEvents ? "Show Less" : `Show ${hiddenEventsCount} More`}
+                </button>
+              )}
+              {hasMore && (
               <button
+                type="button"
                 disabled={loadingMore}
                 onClick={onLoadMore}
-                className="px-6 py-2.5 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant text-xs font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer text-on-surface disabled:opacity-50"
+                className="w-full px-4 py-2.5 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/20 text-xs font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer text-on-surface disabled:opacity-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#3C9984]/25"
               >
                 {loadingMore ? "Loading More..." : "Load More"}
               </button>
+              )}
             </div>
           )}
         </div>

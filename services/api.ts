@@ -260,7 +260,7 @@ export const getOrderInvoice = async (id: string) => {
   });
 };
 
-export const createRazorpayPayment = async (
+export const createOrderPayment = async (
   orderId: string,
   idempotencyKey: string
 ): Promise<CustomerPaymentResult> => {
@@ -284,6 +284,8 @@ export const createRazorpayPayment = async (
     throw getApiError(error, "Unable to start payment. Please try again.");
   }
 };
+
+export const createRazorpayPayment = createOrderPayment;
 
 export const listOrderPayments = async (orderId: string): Promise<CustomerPaymentListResult> => {
   try {
