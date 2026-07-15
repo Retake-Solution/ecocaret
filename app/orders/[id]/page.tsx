@@ -14,13 +14,17 @@ import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import { THEME_COLORS } from "@/theme/colors";
 import axios from "axios";
 import {
+  ApiRequestError,
   getOrderById,
   getOrderEvents,
   getOrderShipments,
   cancelOrder,
+  createOrderReturn,
   getOrderInvoice,
+  listOrderReturns,
 } from "@/services/api";
-import { OrderData, OrderEvent, ShipmentData } from "@/types";
+import { clearStoredIdempotencyKey, getStoredIdempotencyKey } from "@/lib/idempotency";
+import { CustomerCancellation, CustomerReturn, OrderData, OrderEvent, OrderItem, ShipmentData } from "@/types";
 import { useRazorpayPayment } from "@/hooks/useRazorpayPayment";
 
 interface PageProps {
@@ -74,7 +78,10 @@ const getShipmentStatusDetails = (status: string) => {
 const PAYMENT_ACTION_BLOCKED_STATUSES = new Set([
   "paid",
   "not_required",
+  "refund_pending",
+  "partially_refunded",
   "refunded",
+  "disputed",
   "cancelled",
   "review_required",
 ]);
@@ -91,10 +98,40 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   failed: "Payment failed",
   cancelled: "Payment cancelled",
   expired: "Payment session expired",
+  refund_pending: "Cancellation completed. Your refund is pending.",
+  partially_refunded: "Part of your refund has been completed.",
   review_required: "Payment requires support review",
   not_required: "Payment not required",
-  refunded: "Payment refunded",
+  refunded: "Refund completed.",
 };
+
+const RETURN_STATUS_LABELS: Record<string, string> = {
+  return_requested: "Return requested",
+  return_in_transit: "Return in transit",
+  return_received: "Received by warehouse",
+  inspection_approved: "Inspection approved",
+  inspection_rejected: "Inspection rejected",
+  refund_processing: "Refund processing",
+  refunded: "Refund completed",
+  return_rejected: "Return rejected",
+  cancelled: "Return cancelled",
+};
+
+const RETURN_REFUND_LABELS: Record<string, string> = {
+  not_eligible: "Not eligible",
+  refund_pending: "Refund pending",
+  partially_refunded: "Partially refunded",
+  refunded: "Refund completed",
+  review_required: "Requires review",
+};
+
+const ACTIVE_RETURN_STATUSES = new Set([
+  "return_requested",
+  "return_in_transit",
+  "return_received",
+  "inspection_approved",
+  "refund_processing",
+]);
 
 const formatCurrencyMinor = (amountMinor: number, currency: string) =>
   new Intl.NumberFormat("en-US", {
@@ -115,15 +152,50 @@ const formatDateTime = (value?: string) => {
   });
 };
 
-const generateUUID = () => {
-  if (typeof window !== "undefined" && window.crypto && window.crypto.randomUUID) {
-    return window.crypto.randomUUID();
+const getCancelableQuantity = (item: OrderItem) =>
+  Math.max(item.quantity.ordered - item.quantity.cancelled - item.quantity.shipped, 0);
+
+const getShippedReturnBaseQuantity = (item: OrderItem) =>
+  Math.max(item.quantity.shipped - item.quantity.returned, 0);
+
+const getOrderItemId = (item: OrderItem) => item.id || item._id;
+
+const getActiveReturnOutstandingByItem = (returns: CustomerReturn[]) =>
+  returns.reduce<Record<string, number>>((acc, returnRequest) => {
+    if (!ACTIVE_RETURN_STATUSES.has(returnRequest.status)) return acc;
+
+    returnRequest.items.forEach((item) => {
+      acc[item.orderItemId] = (acc[item.orderItemId] || 0) + Math.max(item.quantity - item.receivedQuantity, 0);
+    });
+
+    return acc;
+  }, {});
+
+const getSafeApiMessage = (error: unknown, fallback: string) => {
+  if (error instanceof ApiRequestError) {
+    if (error.status === 401) return "Your session expired. Please sign in again.";
+    if (error.status === 404) return "This order is unavailable. Please refresh your order history.";
+    if (error.status === 429) return "Too many requests. Please wait and try again later.";
+    switch (error.code) {
+      case "ORDER_RETURN_REQUIRED":
+        return "Some selected quantities have already shipped. Please use Request Return for those items.";
+      case "ORDER_VERSION_CONFLICT":
+        return "This order changed while you were reviewing it. We refreshed the order; please submit again.";
+      case "PAYMENT_CANCELLATION_REQUIRED":
+        return "An active payment attempt must finish or expire before cancellation.";
+      case "PAYMENT_VOID_REQUIRED":
+        return "Payment authorization must be released before this cancellation can complete.";
+      case "ORDER_RESERVATION_RELEASE_CONFLICT":
+        return "Inventory reservation changed. We refreshed the order; please review and retry.";
+      case "ORDER_SHIPMENT_QUANTITY_CONFLICT":
+      case "ORDER_RETURN_QUANTITY_CONFLICT":
+        return "Item quantities changed. We refreshed the order; please review and retry.";
+      default:
+        return error.message || fallback;
+    }
   }
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+
+  return error instanceof Error && error.message ? error.message : fallback;
 };
 
 export default function OrderDetailPage({ params }: PageProps) {
@@ -153,8 +225,23 @@ export default function OrderDetailPage({ params }: PageProps) {
   // Cancellation state
   const [isCancelOpen, setIsCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [cancelQuantities, setCancelQuantities] = useState<Record<string, number>>({});
+  const [lastCancellation, setLastCancellation] = useState<CustomerCancellation | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelError, setCancelError] = useState("");
+
+  // Return state
+  const [returns, setReturns] = useState<CustomerReturn[]>([]);
+  const [returnsLoading, setReturnsLoading] = useState(true);
+  const [returnsHasMore, setReturnsHasMore] = useState(false);
+  const [returnsNextCursor, setReturnsNextCursor] = useState<string | undefined>(undefined);
+  const [loadingMoreReturns, setLoadingMoreReturns] = useState(false);
+  const [isReturnOpen, setIsReturnOpen] = useState(false);
+  const [returnReason, setReturnReason] = useState("");
+  const [returnQuantities, setReturnQuantities] = useState<Record<string, number>>({});
+  const [returnError, setReturnError] = useState("");
+  const [isReturning, setIsReturning] = useState(false);
+  const [expandedReturnId, setExpandedReturnId] = useState<string | null>(null);
 
   // Invoice download state
   const [isDownloading, setIsDownloading] = useState(false);
@@ -185,6 +272,37 @@ export default function OrderDetailPage({ params }: PageProps) {
     setLiveOrder(orderResult.data);
     return orderResult.data;
   }, [id]);
+
+  const loadReturns = useCallback(async (cursor?: string) => {
+    const result = await listOrderReturns(id, { limit: 20, cursor });
+
+    setReturns((prev) => {
+      const next = cursor ? [...prev] : [];
+      result.data.forEach((returnRequest) => {
+        if (!next.some((existing) => existing.id === returnRequest.id)) {
+          next.push(returnRequest);
+        }
+      });
+      return next;
+    });
+    setReturnsHasMore(result.pagination?.hasMore || false);
+    setReturnsNextCursor(result.pagination?.nextCursor);
+    return result.data;
+  }, [id]);
+
+  const refreshOrderWorkflow = useCallback(async () => {
+    const [orderResult, eventsResult] = await Promise.all([
+      getOrderById(id),
+      getOrderEvents(id),
+      loadReturns(),
+    ]);
+
+    setLiveOrder(orderResult.data);
+    setEvents([...eventsResult.data].reverse());
+    setEventsHasMore(eventsResult.pagination?.hasMore || false);
+    setNextAfterSequence(eventsResult.pagination?.nextAfterSequence);
+    return orderResult.data;
+  }, [id, loadReturns]);
 
   const paymentFlow = useRazorpayPayment({
     onPaid: async () => {
@@ -251,10 +369,22 @@ export default function OrderDetailPage({ params }: PageProps) {
       }
     };
 
+    const fetchReturnsData = async () => {
+      setReturnsLoading(true);
+      try {
+        await loadReturns();
+      } catch (err) {
+        console.error("Failed to load returns:", err);
+      } finally {
+        setReturnsLoading(false);
+      }
+    };
+
     fetchOrderData();
     fetchEventsData();
     fetchShipmentsData();
-  }, [id, refreshOrder]);
+    fetchReturnsData();
+  }, [id, loadReturns, refreshOrder]);
 
   // Scroll listener for Header solid transition
   useEffect(() => {
@@ -281,43 +411,138 @@ export default function OrderDetailPage({ params }: PageProps) {
     }
   };
 
+  const loadMoreReturns = async () => {
+    if (loadingMoreReturns || !returnsHasMore || !returnsNextCursor) return;
+    try {
+      setLoadingMoreReturns(true);
+      await loadReturns(returnsNextCursor);
+    } catch (err) {
+      console.error("Failed to load more returns:", err);
+      showToast("Unable to load more return requests.", "error");
+    } finally {
+      setLoadingMoreReturns(false);
+    }
+  };
+
   const handleCancelSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!liveOrder || !cancelReason.trim()) return;
+    const selectedItems = liveOrder.items
+      .map((item) => {
+        const itemId = getOrderItemId(item);
+        return {
+          orderItemId: itemId,
+          quantity: Math.min(cancelQuantities[itemId] || 0, getCancelableQuantity(item)),
+        };
+      })
+      .filter((item) => item.quantity > 0);
+    const cancelableItems = liveOrder.items.filter((item) => getCancelableQuantity(item) > 0);
+    const isFullUnshippedCancellation =
+      selectedItems.length === cancelableItems.length &&
+      cancelableItems.every((item) => (cancelQuantities[getOrderItemId(item)] || 0) === getCancelableQuantity(item)) &&
+      liveOrder.items.every((item) => item.quantity.shipped === 0);
+
+    if (selectedItems.length === 0) {
+      setCancelError("Select at least one unshipped quantity to cancel.");
+      return;
+    }
+
     try {
       setIsCancelling(true);
       setCancelError("");
-      const idempotencyKey = generateUUID();
+      const idempotencyKey = getStoredIdempotencyKey(`eco_caret_cancel_${id}`);
       const payload = {
         reason: cancelReason,
         expectedVersion: liveOrder.version,
+        ...(isFullUnshippedCancellation ? {} : { items: selectedItems }),
       };
       const result = await cancelOrder(id, payload, idempotencyKey);
       setLiveOrder(result.data);
+      setLastCancellation(result.cancellation || null);
       setIsCancelOpen(false);
       setCancelReason("");
+      setCancelQuantities({});
+      clearStoredIdempotencyKey(`eco_caret_cancel_${id}`);
       
-      // Refetch events list to capture cancellation events
-      const eventsResult = await getOrderEvents(id);
-      setEvents([...eventsResult.data].reverse());
-      setEventsHasMore(eventsResult.pagination?.hasMore || false);
-      setNextAfterSequence(eventsResult.pagination?.nextAfterSequence);
+      await refreshOrderWorkflow();
+      showToast(
+        result.cancellation?.refundStatus === "refund_pending"
+          ? "Cancellation completed. Your refund is pending."
+          : "Cancellation completed.",
+        "success"
+      );
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "";
-      if (errorMessage.includes("version") || errorMessage.includes("CONFLICT") || errorMessage.includes("409")) {
-        // Refetch order details automatically
+      if (
+        err instanceof ApiRequestError &&
+        [
+          "ORDER_VERSION_CONFLICT",
+          "ORDER_RESERVATION_RELEASE_CONFLICT",
+          "ORDER_SHIPMENT_QUANTITY_CONFLICT",
+        ].includes(err.code || "")
+      ) {
         try {
-          const freshOrder = await getOrderById(id);
-          setLiveOrder(freshOrder.data);
+          await refreshOrderWorkflow();
         } catch (fetchErr) {
           console.error("Failed to refetch order:", fetchErr);
         }
-        setCancelError("Order state was modified. We updated it to the latest version. Please review the changes and confirm again.");
-      } else {
-        setCancelError(errorMessage || "Failed to cancel order.");
       }
+      setCancelError(getSafeApiMessage(err, "Failed to cancel order."));
     } finally {
       setIsCancelling(false);
+    }
+  };
+
+  const handleReturnSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!liveOrder || !returnReason.trim()) return;
+
+    const outstandingByItem = getActiveReturnOutstandingByItem(returns);
+    const selectedItems = liveOrder.items
+      .map((item) => {
+        const itemId = getOrderItemId(item);
+        const maxQuantity = Math.max(getShippedReturnBaseQuantity(item) - (outstandingByItem[itemId] || 0), 0);
+        return {
+          id: itemId,
+          returnQuantity: Math.min(returnQuantities[itemId] || 0, maxQuantity),
+        };
+      })
+      .filter((item) => item.returnQuantity > 0);
+
+    if (selectedItems.length === 0) {
+      setReturnError("Select at least one returnable quantity.");
+      return;
+    }
+
+    try {
+      setIsReturning(true);
+      setReturnError("");
+      const idempotencyKey = getStoredIdempotencyKey(`eco_caret_return_${id}`);
+      const payload = {
+        expectedOrderVersion: liveOrder.version,
+        reason: returnReason,
+        items: selectedItems.map((item) => ({
+          orderItemId: item.id,
+          quantity: item.returnQuantity,
+        })),
+      };
+      await createOrderReturn(id, payload, idempotencyKey);
+      setIsReturnOpen(false);
+      setReturnReason("");
+      setReturnQuantities({});
+      clearStoredIdempotencyKey(`eco_caret_return_${id}`);
+      await refreshOrderWorkflow();
+      showToast("Return requested. Refund status will update after inspection.", "success");
+    } catch (err: unknown) {
+      if (err instanceof ApiRequestError && ["ORDER_VERSION_CONFLICT", "ORDER_RETURN_QUANTITY_CONFLICT"].includes(err.code || "")) {
+        try {
+          await refreshOrderWorkflow();
+        } catch (fetchErr) {
+          console.error("Failed to refetch order:", fetchErr);
+        }
+      }
+      setReturnError(getSafeApiMessage(err, "Unable to request return."));
+    } finally {
+      setIsReturning(false);
     }
   };
 
@@ -491,10 +716,21 @@ export default function OrderDetailPage({ params }: PageProps) {
     payStatusColor = "#EF4444";
   }
 
-  // Customer cancellations allowed for pre-shipment only
-  const isCancellable = ["pending", "confirmed", "crafting", "quality_check", "ready_to_ship"].includes(
-    liveOrder.fulfillmentStatus.toLowerCase()
-  );
+  const outstandingReturnByItem = getActiveReturnOutstandingByItem(returns);
+  const cancelableItems = liveOrder.items
+    .map((item) => ({ item, quantity: getCancelableQuantity(item) }))
+    .filter(({ quantity }) => quantity > 0);
+  const returnableItems = liveOrder.items
+    .map((item) => ({
+      item,
+      quantity: Math.max(getShippedReturnBaseQuantity(item) - (outstandingReturnByItem[getOrderItemId(item)] || 0), 0),
+    }))
+    .filter(({ quantity }) => quantity > 0);
+  const isCancellable = cancelableItems.length > 0;
+  const isReturnable = returnableItems.length > 0;
+  const isFullyCancelled =
+    liveOrder.items.length > 0 &&
+    liveOrder.items.every((item) => item.quantity.cancelled >= item.quantity.ordered);
 
   const renderOrderHeader = () => {
     return (
@@ -568,7 +804,8 @@ export default function OrderDetailPage({ params }: PageProps) {
       liveOrder.totals.amountDueMinor > 0 &&
       !PAYMENT_ACTION_BLOCKED_STATUSES.has(normPayment) &&
       paymentState !== "review_required" &&
-      !reservationExpired;
+      !reservationExpired &&
+      !isFullyCancelled;
     const canClickPayment = needsPayment && !paymentFlow.busy && !paymentFlow.polling;
 
     const handlePaymentClick = async () => {
@@ -668,6 +905,171 @@ export default function OrderDetailPage({ params }: PageProps) {
           </button>
         )}
       </section>
+    );
+  };
+
+  const renderOrderActionsCard = () => {
+    if (!isCancellable && !isReturnable && !lastCancellation) return null;
+
+    return (
+      <div className="bg-surface-container-low rounded-2xl p-6 border border-outline-variant/10 organic-shadow space-y-4">
+        <h3 className="font-label-md text-label-md text-primary uppercase tracking-widest font-bold">
+          Order Actions
+        </h3>
+        {lastCancellation && (
+          <div className="rounded-xl bg-primary/5 border border-primary/10 p-3 text-xs space-y-1">
+            <p className="font-bold text-primary uppercase tracking-wider">
+              Cancellation {lastCancellation.status}
+            </p>
+            <p className="text-on-surface-variant">
+              Refund: {RETURN_REFUND_LABELS[lastCancellation.refundStatus] || lastCancellation.refundStatus.replace(/_/g, " ")}
+            </p>
+            <p className="font-semibold text-on-surface">
+              {formatCurrencyMinor(lastCancellation.refundAmountMinor, orderCurrency)}
+            </p>
+          </div>
+        )}
+        {isCancellable && (
+          <button
+            type="button"
+            onClick={() => {
+              setCancelReason("");
+              setCancelError("");
+              clearStoredIdempotencyKey(`eco_caret_cancel_${id}`);
+              setCancelQuantities(
+                Object.fromEntries(cancelableItems.map(({ item, quantity }) => [getOrderItemId(item), quantity]))
+              );
+              setIsCancelOpen(true);
+            }}
+            className="w-full py-3 bg-error/10 hover:bg-error text-error hover:text-white font-bold text-xs uppercase tracking-widest rounded-full transition-all border border-error/30 cursor-pointer"
+          >
+            Cancel Unshipped Items
+          </button>
+        )}
+        {isReturnable && (
+          <button
+            type="button"
+            onClick={() => {
+              setReturnReason("");
+              setReturnError("");
+              clearStoredIdempotencyKey(`eco_caret_return_${id}`);
+              setReturnQuantities(
+                Object.fromEntries(returnableItems.map(({ item, quantity }) => [getOrderItemId(item), quantity]))
+              );
+              setIsReturnOpen(true);
+            }}
+            className="w-full py-3 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-full hover:opacity-90 transition-all cursor-pointer"
+          >
+            Request Return
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  const renderReturnRequestsSection = () => {
+    return (
+      <div className="bg-surface-container-low rounded-3xl p-8 border border-outline-variant/10 organic-shadow space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h3 className="font-headline-sm text-headline-sm text-primary">
+            Return Requests
+          </h3>
+          {isReturnable && (
+            <button
+              type="button"
+              onClick={() => {
+                setReturnReason("");
+                setReturnError("");
+                clearStoredIdempotencyKey(`eco_caret_return_${id}`);
+                setReturnQuantities(
+                  Object.fromEntries(returnableItems.map(({ item, quantity }) => [getOrderItemId(item), quantity]))
+                );
+                setIsReturnOpen(true);
+              }}
+              className="px-5 py-2.5 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-full hover:opacity-90 transition-all"
+            >
+              Request Return
+            </button>
+          )}
+        </div>
+
+        {returnsLoading ? (
+          <div className="space-y-3 animate-pulse">
+            {[1, 2].map((item) => (
+              <div key={item} className="h-20 rounded-2xl bg-outline-variant/10" />
+            ))}
+          </div>
+        ) : returns.length === 0 ? (
+          <p className="text-sm text-on-surface-variant">
+            No return requests yet. Eligible shipped items can be returned from this page.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {returns.map((returnRequest) => {
+              const isExpanded = expandedReturnId === returnRequest.id;
+              return (
+                <div key={returnRequest.id} className="rounded-2xl border border-outline-variant/10 bg-surface-container-high/30 p-4">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedReturnId(isExpanded ? null : returnRequest.id)}
+                    className="w-full text-left flex items-start justify-between gap-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#3C9984]/25 rounded-xl"
+                    aria-expanded={isExpanded}
+                  >
+                    <div>
+                      <p className="font-bold text-on-surface">
+                        {RETURN_STATUS_LABELS[returnRequest.status] || returnRequest.status.replace(/_/g, " ")}
+                      </p>
+                      <p className="text-xs text-on-surface-variant mt-1">
+                        Refund: {RETURN_REFUND_LABELS[returnRequest.refundStatus] || returnRequest.refundStatus.replace(/_/g, " ")}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs font-bold text-primary">
+                        {formatCurrencyMinor(returnRequest.refundAmountMinor, orderCurrency)}
+                      </p>
+                      <span className="material-symbols-outlined text-on-surface-variant text-lg">
+                        {isExpanded ? "expand_less" : "expand_more"}
+                      </span>
+                    </div>
+                  </button>
+                  {isExpanded && (
+                    <div className="mt-4 pt-4 border-t border-outline-variant/10 space-y-3 text-xs">
+                      <p className="text-on-surface-variant">
+                        Reason: <span className="font-semibold text-on-surface">{returnRequest.reason}</span>
+                      </p>
+                      <div className="space-y-2">
+                        {returnRequest.items.map((returnItem) => {
+                          const orderItem = liveOrder.items.find((item) => getOrderItemId(item) === returnItem.orderItemId);
+                          return (
+                            <div key={returnItem.orderItemId} className="flex justify-between gap-3 rounded-xl bg-surface-container-low p-3">
+                              <span className="font-semibold text-on-surface">
+                                {orderItem?.productSnapshot.name || "Order item"}
+                              </span>
+                              <span className="text-on-surface-variant">
+                                Qty {returnItem.quantity} · received {returnItem.receivedQuantity} · approved {returnItem.approvedQuantity}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {returnsHasMore && (
+              <button
+                type="button"
+                disabled={loadingMoreReturns}
+                onClick={loadMoreReturns}
+                className="w-full py-2.5 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/20 text-xs font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer text-on-surface disabled:opacity-50"
+              >
+                {loadingMoreReturns ? "Loading..." : "Load More Returns"}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -996,7 +1398,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {shipment.items.map((item, idx) => {
-                        const orderItem = liveOrder.items.find((oi) => oi._id === item.orderItemId);
+                        const orderItem = liveOrder.items.find((oi) => getOrderItemId(oi) === item.orderItemId);
                         const itemName = orderItem?.productSnapshot.name || "Jewelry Piece";
                         return (
                           <span
@@ -1120,6 +1522,8 @@ export default function OrderDetailPage({ params }: PageProps) {
 
             {/* Shipment Section */}
             {renderShipmentsSection()}
+
+            {renderReturnRequestsSection()}
           </div>
 
           {/* Sidebar Right */}
@@ -1194,20 +1598,9 @@ export default function OrderDetailPage({ params }: PageProps) {
                   </div>
                 </div>
               </div>
-
-              {isCancellable && (
-                <button
-                  onClick={() => {
-                    setCancelReason("");
-                    setCancelError("");
-                    setIsCancelOpen(true);
-                  }}
-                  className="mt-6 w-full py-3.5 bg-error/10 hover:bg-error text-error hover:text-white font-bold text-xs uppercase tracking-widest rounded-full transition-all border border-error/30 cursor-pointer active:scale-[0.98]"
-                >
-                  Cancel Order
-                </button>
-              )}
             </div>
+
+            {renderOrderActionsCard()}
 
             {renderPaymentActionCard()}
 
@@ -1230,15 +1623,53 @@ export default function OrderDetailPage({ params }: PageProps) {
       {/* Cancel Order Confirmation Modal */}
       {isCancelOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="bg-surface-container-low border border-outline-variant/20 rounded-[2rem] p-8 max-w-md w-full organic-shadow space-y-6 animate-in scale-in duration-300">
+          <div className="bg-surface-container-low border border-outline-variant/20 rounded-[2rem] p-8 max-w-2xl w-full organic-shadow space-y-6 animate-in scale-in duration-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-3 text-error">
               <span className="material-symbols-outlined text-3xl">warning</span>
-              <h3 className="font-playfair text-2xl font-bold">Cancel Order</h3>
+              <h3 className="font-playfair text-2xl font-bold">Cancel Unshipped Items</h3>
             </div>
             <p className="text-on-surface-variant text-sm leading-relaxed">
-              Are you sure you want to request cancellation for this order? This action is immutable once completed.
+              Select only unshipped quantities. Shipped quantities must use Request Return.
             </p>
             <form onSubmit={handleCancelSubmit} className="space-y-4">
+              <div className="space-y-3">
+                {cancelableItems.map(({ item, quantity }) => {
+                  const itemId = getOrderItemId(item);
+                  return (
+                  <div key={itemId} className="rounded-2xl bg-surface-container-high/40 border border-outline-variant/10 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <p className="font-bold text-on-surface">{item.productSnapshot.name}</p>
+                      <p className="text-xs text-on-surface-variant mt-1">
+                        Cancelable: {quantity} · Shipped: {item.quantity.shipped}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label htmlFor={`cancel-${itemId}`} className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+                        Qty
+                      </label>
+                      <input
+                        id={`cancel-${itemId}`}
+                        type="number"
+                        min={0}
+                        max={quantity}
+                        value={cancelQuantities[itemId] ?? 0}
+                        onChange={(event) => {
+                          clearStoredIdempotencyKey(`eco_caret_cancel_${id}`);
+                          const next = Math.max(0, Math.min(quantity, Number(event.target.value) || 0));
+                          setCancelQuantities((prev) => ({ ...prev, [itemId]: next }));
+                        }}
+                        className="w-20 rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm font-bold text-on-surface focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+                  );
+                })}
+                {returnableItems.length > 0 && (
+                  <div className="rounded-xl bg-warning-container/40 text-on-warning-container p-3 text-xs font-semibold">
+                    Some shipped quantities are returnable. Use Request Return for those items.
+                  </div>
+                )}
+              </div>
               <div>
                 <label className="block text-xs uppercase tracking-wider font-bold text-on-surface-variant mb-2">
                   Reason for Cancellation
@@ -1248,7 +1679,10 @@ export default function OrderDetailPage({ params }: PageProps) {
                   maxLength={500}
                   rows={4}
                   value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
+                  onChange={(e) => {
+                    clearStoredIdempotencyKey(`eco_caret_cancel_${id}`);
+                    setCancelReason(e.target.value);
+                  }}
                   placeholder="Please tell us why you wish to cancel this order..."
                   className="w-full rounded-xl bg-surface-container-high border border-outline-variant/20 p-4 text-sm text-on-surface focus:outline-none focus:border-primary transition-all resize-none"
                 />
@@ -1271,10 +1705,101 @@ export default function OrderDetailPage({ params }: PageProps) {
                 </button>
                 <button
                   type="submit"
-                  disabled={isCancelling || !cancelReason.trim()}
+                  disabled={isCancelling || !cancelReason.trim() || Object.values(cancelQuantities).every((quantity) => quantity <= 0)}
                   className="flex-1 py-3 bg-error text-white font-bold text-xs uppercase tracking-widest rounded-full hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
                 >
                   {isCancelling ? "Cancelling..." : "Confirm"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Return Request Modal */}
+      {isReturnOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-surface-container-low border border-outline-variant/20 rounded-[2rem] p-8 max-w-2xl w-full organic-shadow space-y-6 animate-in scale-in duration-300 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center gap-3 text-primary">
+              <span className="material-symbols-outlined text-3xl">assignment_return</span>
+              <h3 className="font-playfair text-2xl font-bold">Request Return</h3>
+            </div>
+            <p className="text-on-surface-variant text-sm leading-relaxed">
+              Return requests are reviewed after warehouse receipt and inspection. Refunds are not immediate.
+            </p>
+            <form onSubmit={handleReturnSubmit} className="space-y-4">
+              <div className="space-y-3">
+                {returnableItems.map(({ item, quantity }) => {
+                  const itemId = getOrderItemId(item);
+                  return (
+                  <div key={itemId} className="rounded-2xl bg-surface-container-high/40 border border-outline-variant/10 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <p className="font-bold text-on-surface">{item.productSnapshot.name}</p>
+                      <p className="text-xs text-on-surface-variant mt-1">
+                        Returnable: {quantity} · Already returned: {item.quantity.returned}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label htmlFor={`return-${itemId}`} className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+                        Qty
+                      </label>
+                      <input
+                        id={`return-${itemId}`}
+                        type="number"
+                        min={0}
+                        max={quantity}
+                        value={returnQuantities[itemId] ?? 0}
+                        onChange={(event) => {
+                          clearStoredIdempotencyKey(`eco_caret_return_${id}`);
+                          const next = Math.max(0, Math.min(quantity, Number(event.target.value) || 0));
+                          setReturnQuantities((prev) => ({ ...prev, [itemId]: next }));
+                        }}
+                        className="w-20 rounded-xl border border-outline-variant/20 bg-surface px-3 py-2 text-sm font-bold text-on-surface focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+                  );
+                })}
+              </div>
+              <div>
+                <label className="block text-xs uppercase tracking-wider font-bold text-on-surface-variant mb-2">
+                  Return Reason
+                </label>
+                <textarea
+                  required
+                  maxLength={500}
+                  rows={4}
+                  value={returnReason}
+                  onChange={(e) => {
+                    clearStoredIdempotencyKey(`eco_caret_return_${id}`);
+                    setReturnReason(e.target.value);
+                  }}
+                  placeholder="Please tell us why you want to return these items..."
+                  className="w-full rounded-xl bg-surface-container-high border border-outline-variant/20 p-4 text-sm text-on-surface focus:outline-none focus:border-primary transition-all resize-none"
+                />
+              </div>
+
+              {returnError && (
+                <div className="p-3 bg-error-container/20 border border-error/10 text-error rounded-xl text-xs font-semibold">
+                  {returnError}
+                </div>
+              )}
+
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  disabled={isReturning}
+                  onClick={() => setIsReturnOpen(false)}
+                  className="flex-1 py-3 bg-surface-container-highest hover:bg-outline-variant/30 text-on-surface font-bold text-xs uppercase tracking-widest rounded-full transition-all cursor-pointer"
+                >
+                  Go Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={isReturning || !returnReason.trim() || Object.values(returnQuantities).every((quantity) => quantity <= 0)}
+                  className="flex-1 py-3 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-full hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {isReturning ? "Submitting..." : "Request Return"}
                 </button>
               </div>
             </form>

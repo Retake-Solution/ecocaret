@@ -18,6 +18,10 @@ import {
   GetOrderShipmentsResult,
   CancelOrderPayload,
   CancelOrderResult,
+  CreateReturnPayload,
+  CustomerReturnResult,
+  ListReturnsParams,
+  ListReturnsResult,
   CreatePaymentPayload,
   CustomerPaymentListResult,
   CustomerPaymentResult,
@@ -251,6 +255,64 @@ export const cancelOrder = async (
     return json;
   } catch (error) {
     throw getApiError(error, "Unable to cancel order.");
+  }
+};
+
+export const createOrderReturn = async (
+  orderId: string,
+  payload: CreateReturnPayload,
+  idempotencyKey: string
+): Promise<CustomerReturnResult> => {
+  try {
+    const response = await apiClient.post(`/api/v1/orders/${orderId}/returns`, payload, {
+      headers: {
+        "Idempotency-Key": idempotencyKey,
+      },
+    });
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to request return.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to request return.");
+  }
+};
+
+export const listOrderReturns = async (
+  orderId: string,
+  params?: ListReturnsParams
+): Promise<ListReturnsResult> => {
+  try {
+    const response = await apiClient.get(`/api/v1/orders/${orderId}/returns`, {
+      params: {
+        limit: params?.limit ?? 20,
+        cursor: params?.cursor,
+      },
+    });
+    const json = response.data;
+    if (!json?.success || !Array.isArray(json.data)) {
+      throw new Error(json?.message || "Unable to load return requests.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to load return requests.");
+  }
+};
+
+export const getOrderReturn = async (
+  orderId: string,
+  returnId: string
+): Promise<CustomerReturnResult> => {
+  try {
+    const response = await apiClient.get(`/api/v1/orders/${orderId}/returns/${returnId}`);
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to load return request.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to load return request.");
   }
 };
 

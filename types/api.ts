@@ -95,6 +95,7 @@ export interface PlaceOrderResult {
 }
 
 export interface OrderItem {
+  id?: string;
   productSnapshot: {
     name: string;
     sku: string;
@@ -151,7 +152,7 @@ export interface OrderData {
   shippingAddressSnapshot?: AddressInput;
   billingAddressSnapshot?: AddressInput;
   fulfillmentStatus: string;
-  paymentStatus: string;
+  paymentStatus: OrderPaymentStatus | string;
   reservationStatus?: string;
   reservationExpiresAt?: string;
   cancellation?: {
@@ -164,6 +165,19 @@ export interface OrderData {
   createdAt: string;
   updatedAt: string;
 }
+
+export type OrderPaymentStatus =
+  | "pending"
+  | "authorized"
+  | "paid"
+  | "failed"
+  | "cancelled"
+  | "not_required"
+  | "refund_pending"
+  | "partially_refunded"
+  | "refunded"
+  | "disputed"
+  | "review_required";
 
 export interface GetOrdersParams {
   page?: number;
@@ -318,7 +332,100 @@ export interface CancelOrderPayload {
   items?: CancelOrderItemInput[];
 }
 
+export type CancellationRefundStatus =
+  | "not_required"
+  | "refund_pending"
+  | "partially_refunded"
+  | "refunded"
+  | "review_required";
+
+export interface CustomerCancellation {
+  id: string;
+  orderId: string;
+  items: Array<{
+    orderItemId: string;
+    quantity: number;
+    refundAmountMinor: number;
+  }>;
+  status: "completed" | "rejected";
+  refundStatus: CancellationRefundStatus;
+  refundAmountMinor: number;
+  refundedMinor: number;
+  reason: string;
+  completedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface CancelOrderResult {
   success: boolean;
   data: OrderData;
+  cancellation?: CustomerCancellation;
+}
+
+export type CustomerReturnStatus =
+  | "return_requested"
+  | "return_in_transit"
+  | "return_received"
+  | "inspection_approved"
+  | "inspection_rejected"
+  | "refund_processing"
+  | "refunded"
+  | "return_rejected"
+  | "cancelled";
+
+export type CustomerReturnRefundStatus =
+  | "not_eligible"
+  | "refund_pending"
+  | "partially_refunded"
+  | "refunded"
+  | "review_required";
+
+export interface CustomerReturn {
+  id: string;
+  orderId: string;
+  items: Array<{
+    orderItemId: string;
+    quantity: number;
+    receivedQuantity: number;
+    approvedQuantity: number;
+    refundAmountMinor: number;
+  }>;
+  reason: string;
+  status: CustomerReturnStatus;
+  refundStatus: CustomerReturnRefundStatus;
+  refundAmountMinor: number;
+  refundedMinor: number;
+  version: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateReturnPayload {
+  expectedOrderVersion: number;
+  reason: string;
+  items: Array<{
+    orderItemId: string;
+    quantity: number;
+  }>;
+}
+
+export interface ListReturnsParams {
+  limit?: number;
+  cursor?: string;
+}
+
+export interface ListReturnsResult {
+  success: boolean;
+  data: CustomerReturn[];
+  pagination: {
+    limit: number;
+    hasMore: boolean;
+    nextCursor?: string;
+  };
+}
+
+export interface CustomerReturnResult {
+  success: boolean;
+  data: CustomerReturn;
 }
