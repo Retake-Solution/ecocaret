@@ -2,7 +2,7 @@
 
 import React, { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
@@ -11,8 +11,8 @@ import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { setCartOpen, removeFromCart, clearCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import { toggleWishlist } from "@/lib/features/wishlist/wishlistSlice";
-import { fetchProductList, ProductFilters } from "@/services/api";
-import { ApiCategory, ApiProduct } from "@/types";
+import { fetchProductList } from "@/services/api";
+import { ApiCategory, ApiProduct, ProductFilters } from "@/types";
 
 const filterOptions = {
   gender: ["men", "women", "unisex"],
@@ -164,6 +164,7 @@ function CollectionsList({
   initialSubCategory: string;
 }) {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const cartOpen = useAppSelector((state) => state.cart.isOpen);
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const cartItems = useAppSelector((state) => state.cart.items);
@@ -414,9 +415,8 @@ function CollectionsList({
         cartItems={cartItems}
         onRemoveItem={(id) => dispatch(removeFromCart(id))}
         onCheckout={() => {
-          alert("Checkout processed safely. Thank you for selecting ethical luxury!");
-          dispatch(clearCart());
           dispatch(setCartOpen(false));
+          router.push("/checkout");
         }}
       />
 

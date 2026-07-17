@@ -1,5 +1,18 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
+export interface ProfileAddress {
+  name: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  phone: string;
+  isDefault?: boolean;
+  _id?: string;
+}
+
 export interface ProfileUser {
   id?: string;
   email: string;
@@ -7,6 +20,8 @@ export interface ProfileUser {
   role?: string;
   permissions?: string[];
   isActive?: boolean;
+  residentialAddress?: ProfileAddress | null;
+  shippingAddresses?: ProfileAddress[];
 }
 
 interface ProfileState {

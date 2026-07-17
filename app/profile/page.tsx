@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import ProfileDialog from "@/components/ProfileDialog";
+import ConfirmationModal from "@/components/ConfirmationModal";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { setCartOpen, removeFromCart, clearCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen, logoutUser } from "@/lib/features/profile/profileSlice";
@@ -20,6 +22,7 @@ const formatProfileLabel = (value?: string) =>
 
 export default function ProfilePage() {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const cartOpen = useAppSelector((state) => state.cart.isOpen);
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const cartItems = useAppSelector((state) => state.cart.items);
@@ -33,10 +36,29 @@ export default function ProfilePage() {
   const [settingsName, setSettingsName] = useState("");
   const [settingsAddress, setSettingsAddress] = useState("");
   const [updateSuccess, setUpdateSuccess] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const roleLabel = formatProfileLabel(user?.role) || "Member";
   const profileName = user?.name || user?.email.split("@")[0] || "Eco Caret Member";
   const displayName = settingsName || profileName;
   const profileEmail = user?.email || "";
+
+  useEffect(() => {
+    if (user) {
+      const timer = window.setTimeout(() => {
+        setSettingsName(user.name || "");
+        if (user.shippingAddresses && user.shippingAddresses.length > 0) {
+          const addr = user.shippingAddresses[0];
+          const formatted = `${addr.name}\n${addr.line1}${addr.line2 ? `, ${addr.line2}` : ""}\n${addr.city}, ${addr.state} ${addr.postalCode}\n${addr.country}\nPhone: ${addr.phone}`;
+          setSettingsAddress(formatted);
+        } else if (user.residentialAddress) {
+          const addr = user.residentialAddress;
+          const formatted = `${addr.name}\n${addr.line1}${addr.line2 ? `, ${addr.line2}` : ""}\n${addr.city}, ${addr.state} ${addr.postalCode}\n${addr.country}\nPhone: ${addr.phone}`;
+          setSettingsAddress(formatted);
+        }
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [user]);
 
   // Scroll listener for Header
   useEffect(() => {
@@ -53,9 +75,9 @@ export default function ProfilePage() {
     setTimeout(() => setUpdateSuccess(false), 3000);
   };
 
-  const handleLogout = () => {
+  const confirmLogout = () => {
     dispatch(logoutUser());
-    alert("Successfully signed out.");
+    setIsLogoutModalOpen(false);
     window.location.href = "/";
   };
 
@@ -160,6 +182,13 @@ export default function ProfilePage() {
                         </button>
                       );
                     })}
+                    <button
+                      onClick={() => setIsLogoutModalOpen(true)}
+                      className="flex items-center gap-3 px-5 py-3.5 rounded-xl font-label-md text-label-md tracking-wider transition-all cursor-pointer whitespace-nowrap lg:w-full text-error hover:bg-error-container/10 mt-2 lg:mt-4 border border-error/15 lg:border-none"
+                    >
+                      <span className="material-symbols-outlined text-lg">logout</span>
+                      <span>LOGOUT</span>
+                    </button>
                   </nav>
 
                   {/* Desktop Quick Stats */}
@@ -287,12 +316,119 @@ export default function ProfilePage() {
                   </div>
                 )}
 
-                {/* PROFILE / SETTINGS TAB */}
-                {(activeTab === "profile" || activeTab === "settings") && (
+                {/* PROFILE TAB */}
+                {activeTab === "profile" && (
                   <div className="space-y-8 animate-fade-in">
                     <div className="flex items-center justify-between border-b border-outline-variant/20 pb-4">
                       <h2 className="font-playfair text-3xl font-semibold text-primary">
-                        {activeTab === "profile" ? "Profile" : "Settings"}
+                        Profile Sourcing Record
+                      </h2>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-bold px-3 py-1 bg-primary-fixed text-on-primary-fixed-variant rounded-full uppercase tracking-widest">
+                          {roleLabel}
+                        </span>
+                        <button
+                          onClick={() => setIsLogoutModalOpen(true)}
+                          className="flex items-center gap-1.5 px-4 py-1.5 border border-error/30 text-error hover:bg-error hover:text-white rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-sm">logout</span>
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Account Identity */}
+                      <div className="bg-surface-container-low border border-outline-variant/20 rounded-[2rem] p-8 shadow-sm space-y-4">
+                        <h3 className="font-playfair text-xl font-semibold text-secondary flex items-center gap-2">
+                          <span className="material-symbols-outlined">fingerprint</span>
+                          Identity Details
+                        </h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between border-b border-outline-variant/10 pb-2">
+                            <span className="text-on-surface-variant">Full Name</span>
+                            <span className="font-bold text-on-surface">{displayName}</span>
+                          </div>
+                          <div className="flex justify-between border-b border-outline-variant/10 pb-2">
+                            <span className="text-on-surface-variant">Email Address</span>
+                            <span className="font-bold text-on-surface">{profileEmail}</span>
+                          </div>
+                          <div className="flex justify-between pb-2">
+                            <span className="text-on-surface-variant">Account Type</span>
+                            <span className="font-bold text-primary">{roleLabel}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Carbon Offset Stats */}
+                      <div className="bg-surface-container-low border border-outline-variant/20 rounded-[2rem] p-8 shadow-sm space-y-4 flex flex-col justify-between">
+                        <div>
+                          <h3 className="font-playfair text-xl font-semibold text-secondary flex items-center gap-2">
+                            <span className="material-symbols-outlined">eco</span>
+                            Conscious Ledger
+                          </h3>
+                          <p className="text-xs text-on-surface-variant mt-2 leading-relaxed">
+                            Thank you for being part of our zero-carbon sourcing circle. Your curated selections fund verified green carbon offsets.
+                          </p>
+                        </div>
+                        <div className="flex justify-between pt-2 text-xs border-t border-outline-variant/10">
+                          <span className="text-on-surface-variant">Ledger Registration</span>
+                          <span className="font-bold text-on-surface">Active Verified</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Addresses */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Residential address */}
+                      <div className="bg-surface-container-low border border-outline-variant/20 rounded-[2rem] p-8 shadow-sm space-y-4">
+                        <h3 className="font-playfair text-xl font-semibold text-secondary flex items-center gap-2">
+                          <span className="material-symbols-outlined">home</span>
+                          Residential Sourcing Address
+                        </h3>
+                        {user?.residentialAddress ? (
+                          <div className="space-y-1 text-sm text-on-surface-variant leading-relaxed">
+                            <p className="font-bold text-on-surface">{user.residentialAddress.name}</p>
+                            <p>{user.residentialAddress.line1}</p>
+                            {user.residentialAddress.line2 && <p>{user.residentialAddress.line2}</p>}
+                            <p>{user.residentialAddress.city}, {user.residentialAddress.state} {user.residentialAddress.postalCode}</p>
+                            <p className="uppercase">{user.residentialAddress.country}</p>
+                            <p className="text-xs mt-2">Phone: {user.residentialAddress.phone}</p>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-on-surface-variant italic">No residential address on file.</p>
+                        )}
+                      </div>
+
+                      {/* Shipping address */}
+                      <div className="bg-surface-container-low border border-outline-variant/20 rounded-[2rem] p-8 shadow-sm space-y-4">
+                        <h3 className="font-playfair text-xl font-semibold text-secondary flex items-center gap-2">
+                          <span className="material-symbols-outlined">local_shipping</span>
+                          Default Shipping Destination
+                        </h3>
+                        {user?.shippingAddresses && user.shippingAddresses.length > 0 ? (
+                          <div className="space-y-1 text-sm text-on-surface-variant leading-relaxed">
+                            <p className="font-bold text-on-surface">{user.shippingAddresses[0].name}</p>
+                            <p>{user.shippingAddresses[0].line1}</p>
+                            {user.shippingAddresses[0].line2 && <p>{user.shippingAddresses[0].line2}</p>}
+                            <p>{user.shippingAddresses[0].city}, {user.shippingAddresses[0].state} {user.shippingAddresses[0].postalCode}</p>
+                            <p className="uppercase">{user.shippingAddresses[0].country}</p>
+                            <p className="text-xs mt-2">Phone: {user.shippingAddresses[0].phone}</p>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-on-surface-variant italic">No shipping addresses on file.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* SETTINGS TAB */}
+                {activeTab === "settings" && (
+                  <div className="space-y-8 animate-fade-in">
+                    <div className="flex items-center justify-between border-b border-outline-variant/20 pb-4">
+                      <h2 className="font-playfair text-3xl font-semibold text-primary">
+                        Profile Settings
                       </h2>
                       <span className="text-[10px] font-bold px-3 py-1 bg-primary-fixed text-on-primary-fixed-variant rounded-full uppercase tracking-widest">
                         {roleLabel}
@@ -328,7 +464,7 @@ export default function ProfilePage() {
                         <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block">Shipping Address</label>
                         <textarea
                           required
-                          rows={3}
+                          rows={4}
                           value={settingsAddress}
                           onChange={(e) => setSettingsAddress(e.target.value)}
                           placeholder="Add your shipping address"
@@ -346,7 +482,7 @@ export default function ProfilePage() {
 
                         <button
                           type="button"
-                          onClick={handleLogout}
+                          onClick={() => setIsLogoutModalOpen(true)}
                           className="w-full sm:w-auto border border-error text-error hover:bg-error-container/20 px-8 py-3.5 rounded-full font-label-md text-label-md transition-all text-center cursor-pointer font-semibold uppercase tracking-wider"
                         >
                           Sign Out
@@ -381,7 +517,7 @@ export default function ProfilePage() {
                 onClick={() => dispatch(setProfileOpen(true))}
                 className="bg-secondary text-white px-10 py-4 rounded-full font-label-md text-label-md hover:bg-primary hover:shadow-xl hover:shadow-secondary/20 transition-all duration-300 cursor-pointer font-bold uppercase tracking-wider"
               >
-                Sign In to Circle
+                Sign In to EcoCaret
               </button>
             </div>
           )}
@@ -459,12 +595,20 @@ export default function ProfilePage() {
         cartItems={cartItems}
         onRemoveItem={(id) => dispatch(removeFromCart(id))}
         onCheckout={() => {
-          alert("Checkout processed safely. Thank you for selecting ethical luxury!");
-          dispatch(clearCart());
           dispatch(setCartOpen(false));
+          router.push("/checkout");
         }}
       />
       <ProfileDialog isOpen={profileOpen} onClose={() => dispatch(setProfileOpen(false))} />
+      <ConfirmationModal
+        isOpen={isLogoutModalOpen}
+        title="Sign Out"
+        message="Are you sure you want to sign out of your profile?"
+        confirmLabel="Sign Out"
+        cancelLabel="Stay"
+        onConfirm={confirmLogout}
+        onCancel={() => setIsLogoutModalOpen(false)}
+      />
     </div>
   );
 }

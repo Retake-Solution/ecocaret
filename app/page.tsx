@@ -15,8 +15,11 @@ import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 
 
 
+import { useRouter } from "next/navigation";
+
 export default function Home() {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const cartOpen = useAppSelector((state) => state.cart.isOpen);
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const cartItems = useAppSelector((state) => state.cart.items);
@@ -144,7 +147,7 @@ export default function Home() {
         <section className="py-16 md:py-24 px-margin-mobile md:px-margin-desktop bg-surface">
           <div className="max-w-3xl mx-auto text-center space-y-6 md:space-y-8 relative">
             <h2 className="font-headline-md text-headline-md text-on-surface">
-              Join the Conscious Circle
+              Join the Conscious EcoCaret
             </h2>
             <p className="font-body-lg text-body-lg text-on-surface-variant">
               Be the first to explore limited drops and receive insights into the
@@ -170,7 +173,7 @@ export default function Home() {
             {/* Subscribed Toast Success Alert */}
             {subscribed && (
               <div className="absolute top-full left-1/2 -translate-x-1/2 mt-4 bg-secondary text-white px-6 py-3 rounded-full text-label-md font-medium shadow-md transition-opacity animate-bounce">
-                Thank you for joining the Conscious Circle! Check your inbox.
+                Thank you for joining the Conscious EcoCaret! Check your inbox.
               </div>
             )}
           </div>
@@ -187,9 +190,8 @@ export default function Home() {
         cartItems={cartItems}
         onRemoveItem={(id) => dispatch(removeFromCart(id))}
         onCheckout={() => {
-          alert("Checkout processed safely. Thank you for selecting ethical luxury!");
-          dispatch(clearCart());
           dispatch(setCartOpen(false));
+          router.push("/checkout");
         }}
       />
 

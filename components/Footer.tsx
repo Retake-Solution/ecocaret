@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 
 export default function Footer() {
   return (
@@ -15,30 +16,36 @@ export default function Footer() {
           </p>
         </div>
         <div className="flex flex-wrap justify-center gap-8">
-          <a
+          <Link
             className="font-label-sm text-label-sm text-on-surface-variant hover:text-secondary underline decoration-secondary/30 transition-opacity duration-200 hover:opacity-80"
             href="#"
           >
             Sustainability Report
-          </a>
-          <a
+          </Link>
+          <Link
             className="font-label-sm text-label-sm text-on-surface-variant hover:text-secondary underline decoration-secondary/30 transition-opacity duration-200 hover:opacity-80"
             href="#"
           >
             Care Guide
-          </a>
-          <a
+          </Link>
+          <Link
             className="font-label-sm text-label-sm text-on-surface-variant hover:text-secondary underline decoration-secondary/30 transition-opacity duration-200 hover:opacity-80"
             href="#"
           >
             Shipping
-          </a>
-          <a
+          </Link>
+          <Link
             className="font-label-sm text-label-sm text-on-surface-variant hover:text-secondary underline decoration-secondary/30 transition-opacity duration-200 hover:opacity-80"
-            href="#"
+            href="/terms-and-conditions"
+          >
+            Terms
+          </Link>
+          <Link
+            className="font-label-sm text-label-sm text-on-surface-variant hover:text-secondary underline decoration-secondary/30 transition-opacity duration-200 hover:opacity-80"
+            href="/privacy-policy"
           >
             Privacy
-          </a>
+          </Link>
         </div>
         <div className="flex gap-4">
           <span

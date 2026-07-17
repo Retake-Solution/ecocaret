@@ -1,48 +1,58 @@
-import apiClient from './apiClient';
-import axios from 'axios';
+import apiClient from "./apiClient";
+import axios from "axios";
+import {
+  ApiProduct,
+  LoginCredentials,
+  RegisterCredentials,
+  LoginResult,
+  ProductFilters,
+  ProductListResult,
+  PlaceOrderPayload,
+  PlaceOrderResult,
+  GetOrdersParams,
+  GetOrdersResult,
+  SingleOrderResult,
+  GetOrderEventsParams,
+  GetOrderEventsResult,
+  GetOrderShipmentsParams,
+  GetOrderShipmentsResult,
+  CancelOrderPayload,
+  CancelOrderResult,
+  CreateReturnPayload,
+  CustomerReturnResult,
+  ListReturnsParams,
+  ListReturnsResult,
+  CreatePaymentPayload,
+  CustomerPaymentListResult,
+  CustomerPaymentResult,
+  VerifyRazorpayPayload,
+} from "@/types";
 
-import { ApiProduct } from '@/types';
-import type { ProfileUser } from '@/lib/features/profile/profileSlice';
+export class ApiRequestError extends Error {
+  status?: number;
+  code?: string;
 
-export interface LoginCredentials {
-  email: string;
-  password: string;
+  constructor(message: string, status?: number, code?: string) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+    this.code = code;
+  }
 }
 
-export interface RegisterCredentials {
-  name: string;
-  email: string;
-  password: string;
-}
+const getApiError = (error: unknown, fallback: string) => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as { message?: string; code?: string; error?: string } | undefined;
+    return new ApiRequestError(
+      data?.message || fallback,
+      error.response?.status,
+      data?.code || data?.error
+    );
+  }
 
-export interface LoginResult {
-  user: ProfileUser;
-  token: string;
-}
-
-export interface ProductFilters {
-  category?: string;
-  subCategory?: string;
-  collection?: string;
-  metalType?: string;
-  metalColor?: string;
-  purity?: string;
-  gender?: string;
-  shape?: string;
-  stoneType?: string;
-  minPrice?: string;
-  maxPrice?: string;
-  sort?: string;
-  page?: number;
-  limit?: number;
-}
-
-export interface ProductListResult {
-  products: ApiProduct[];
-  total: number;
-  page: number;
-  limit: number;
-}
+  if (error instanceof Error) return error;
+  return new Error(fallback);
+};
 
 const toQueryParams = (filters?: ProductFilters) => {
   if (!filters) return undefined;
@@ -54,14 +64,14 @@ const toQueryParams = (filters?: ProductFilters) => {
 
 export const login = async ({ email, password }: LoginCredentials): Promise<LoginResult> => {
   try {
-    const response = await apiClient.post('/api/v1/auth/login', {
+    const response = await apiClient.post("/api/v1/auth/login", {
       email,
       password,
     });
     const json = response.data;
 
     if (!json?.success || !json?.data || !json?.token) {
-      throw new Error(json?.message || 'Unable to sign in. Please try again.');
+      throw new Error(json?.message || "Unable to sign in. Please try again.");
     }
 
     return {
@@ -69,29 +79,17 @@ export const login = async ({ email, password }: LoginCredentials): Promise<Logi
       token: json.token,
     };
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Unable to sign in. Please try again.');
-    }
-
-    throw error;
+    throw getApiError(error, "Unable to sign in. Please try again.");
   }
 };
 
-export const register = async ({
-  name,
-  email,
-  password,
-}: RegisterCredentials): Promise<LoginResult> => {
+export const register = async (credentials: RegisterCredentials): Promise<LoginResult> => {
   try {
-    const response = await apiClient.post('/api/v1/auth/register', {
-      name,
-      email,
-      password,
-    });
+    const response = await apiClient.post("/api/v1/auth/register", credentials);
     const json = response.data;
 
     if (!json?.success || !json?.data || !json?.token) {
-      throw new Error(json?.message || 'Unable to create account. Please try again.');
+      throw new Error(json?.message || "Unable to create account. Please try again.");
     }
 
     return {
@@ -99,17 +97,13 @@ export const register = async ({
       token: json.token,
     };
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(error.response?.data?.message || 'Unable to create account. Please try again.');
-    }
-
-    throw error;
+    throw getApiError(error, "Unable to create account. Please try again.");
   }
 };
 
 export const fetchProductList = async (filters?: ProductFilters): Promise<ProductListResult> => {
   try {
-    const response = await apiClient.get('/api/v1/products', {
+    const response = await apiClient.get("/api/v1/products", {
       params: toQueryParams(filters),
     });
     const json = response.data;
@@ -136,7 +130,7 @@ export const fetchProductList = async (filters?: ProductFilters): Promise<Produc
       limit: filters?.limit ?? 20,
     };
   } catch (error) {
-    console.error('Failed to fetch products:', error);
+    console.error("Failed to fetch products:", error);
     return {
       products: [],
       total: 0,
@@ -162,5 +156,244 @@ export const fetchProductById = async (id: string): Promise<ApiProduct | null> =
   } catch (error) {
     console.error(`Failed to fetch product with id ${id}:`, error);
     return null;
+  }
+};
+
+export const placeOrder = async (
+  payload: PlaceOrderPayload,
+  idempotencyKey: string
+): Promise<PlaceOrderResult> => {
+  try {
+    const response = await apiClient.post("/api/v1/orders", payload, {
+      headers: {
+        "Idempotency-Key": idempotencyKey,
+      },
+    });
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to place order. Please try again.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to place order. Please try again.");
+  }
+};
+
+export const getOrders = async (params?: GetOrdersParams): Promise<GetOrdersResult> => {
+  try {
+    const response = await apiClient.get("/api/v1/orders", { params });
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to load orders. Please try again.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to load orders. Please try again.");
+  }
+};
+
+export const getOrderById = async (id: string): Promise<SingleOrderResult> => {
+  try {
+    const response = await apiClient.get(`/api/v1/orders/${id}`);
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to load order details. Please try again.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to load order details. Please try again.");
+  }
+};
+
+export const getOrderEvents = async (
+  id: string,
+  params?: GetOrderEventsParams
+): Promise<GetOrderEventsResult> => {
+  try {
+    const response = await apiClient.get(`/api/v1/orders/${id}/events`, { params });
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to load order timeline events.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to load order timeline events.");
+  }
+};
+
+export const getOrderShipments = async (
+  id: string,
+  params?: GetOrderShipmentsParams
+): Promise<GetOrderShipmentsResult> => {
+  try {
+    const response = await apiClient.get(`/api/v1/orders/${id}/shipments`, { params });
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to load shipments.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to load shipments.");
+  }
+};
+
+export const cancelOrder = async (
+  id: string,
+  payload: CancelOrderPayload,
+  idempotencyKey: string
+): Promise<CancelOrderResult> => {
+  try {
+    const response = await apiClient.post(`/api/v1/orders/${id}/cancellations`, payload, {
+      headers: {
+        "Idempotency-Key": idempotencyKey,
+      },
+    });
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to cancel order.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to cancel order.");
+  }
+};
+
+export const createOrderReturn = async (
+  orderId: string,
+  payload: CreateReturnPayload,
+  idempotencyKey: string
+): Promise<CustomerReturnResult> => {
+  try {
+    const response = await apiClient.post(`/api/v1/orders/${orderId}/returns`, payload, {
+      headers: {
+        "Idempotency-Key": idempotencyKey,
+      },
+    });
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to request return.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to request return.");
+  }
+};
+
+export const listOrderReturns = async (
+  orderId: string,
+  params?: ListReturnsParams
+): Promise<ListReturnsResult> => {
+  try {
+    const response = await apiClient.get(`/api/v1/orders/${orderId}/returns`, {
+      params: {
+        limit: params?.limit ?? 20,
+        cursor: params?.cursor,
+      },
+    });
+    const json = response.data;
+    if (!json?.success || !Array.isArray(json.data)) {
+      throw new Error(json?.message || "Unable to load return requests.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to load return requests.");
+  }
+};
+
+export const getOrderReturn = async (
+  orderId: string,
+  returnId: string
+): Promise<CustomerReturnResult> => {
+  try {
+    const response = await apiClient.get(`/api/v1/orders/${orderId}/returns/${returnId}`);
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to load return request.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to load return request.");
+  }
+};
+
+export const getOrderInvoice = async (id: string) => {
+  return apiClient.get(`/api/v1/orders/${id}/invoice`, {
+    responseType: "blob",
+  });
+};
+
+export const createOrderPayment = async (
+  orderId: string,
+  idempotencyKey: string
+): Promise<CustomerPaymentResult> => {
+  try {
+    const payload: CreatePaymentPayload = {
+      channel: "web",
+      returnPath: "order-status",
+      provider: "razorpay",
+    };
+    const response = await apiClient.post(`/api/v1/orders/${orderId}/payments`, payload, {
+      headers: {
+        "Idempotency-Key": idempotencyKey,
+      },
+    });
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to start payment. Please try again.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to start payment. Please try again.");
+  }
+};
+
+export const createRazorpayPayment = createOrderPayment;
+
+export const listOrderPayments = async (orderId: string): Promise<CustomerPaymentListResult> => {
+  try {
+    const response = await apiClient.get(`/api/v1/orders/${orderId}/payments`);
+    const json = response.data;
+    if (!json?.success || !Array.isArray(json.data)) {
+      throw new Error(json?.message || "Unable to load payment attempts.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to load payment attempts.");
+  }
+};
+
+export const getOrderPayment = async (
+  orderId: string,
+  paymentId: string
+): Promise<CustomerPaymentResult> => {
+  try {
+    const response = await apiClient.get(`/api/v1/orders/${orderId}/payments/${paymentId}`);
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to load payment status.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to load payment status.");
+  }
+};
+
+export const verifyRazorpayPayment = async (
+  orderId: string,
+  paymentId: string,
+  payload: VerifyRazorpayPayload
+): Promise<CustomerPaymentResult> => {
+  try {
+    const response = await apiClient.post(
+      `/api/v1/orders/${orderId}/payments/${paymentId}/verify-razorpay`,
+      payload
+    );
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to verify payment.");
+    }
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to verify payment.");
   }
 };
