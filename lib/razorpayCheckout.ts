@@ -16,6 +16,7 @@ export interface RazorpayOptions {
   };
   handler: (response: RazorpayCheckoutSuccessResponse) => void;
   modal?: {
+    confirm_close?: boolean;
     ondismiss?: () => void;
   };
   theme?: {
@@ -100,7 +101,11 @@ export const loadRazorpayCheckout = () => {
 export const openRazorpayCheckout = async (
   action: RazorpayCheckoutAction,
   prefill: RazorpayOptions["prefill"],
-  orderReference?: string
+  orderReference?: string,
+  callbacks?: {
+    onSuccessStart?: () => void;
+    onDismiss?: () => void;
+  }
 ) => {
   await loadRazorpayCheckout();
 
@@ -126,6 +131,7 @@ export const openRazorpayCheckout = async (
       description: orderReference ? `Eco Caret ${orderReference}` : "Eco Caret order payment",
       prefill,
       handler: (response) => {
+        callbacks?.onSuccessStart?.();
         settle({
           type: "success",
           confirmation: {
@@ -136,7 +142,9 @@ export const openRazorpayCheckout = async (
         });
       },
       modal: {
+        confirm_close: true,
         ondismiss: () => {
+          callbacks?.onDismiss?.();
           settle({ type: "dismissed" });
         },
       },

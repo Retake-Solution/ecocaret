@@ -731,6 +731,7 @@ export default function OrderDetailPage({ params }: PageProps) {
   const isFullyCancelled =
     liveOrder.items.length > 0 &&
     liveOrder.items.every((item) => item.quantity.cancelled >= item.quantity.ordered);
+  const paymentActionLocked = paymentFlow.busy || paymentFlow.polling || paymentFlow.reconciling;
 
   const renderOrderHeader = () => {
     return (
@@ -806,7 +807,7 @@ export default function OrderDetailPage({ params }: PageProps) {
       paymentState !== "review_required" &&
       !reservationExpired &&
       !isFullyCancelled;
-    const canClickPayment = needsPayment && !paymentFlow.busy && !paymentFlow.polling;
+    const canClickPayment = needsPayment && !paymentActionLocked;
 
     const handlePaymentClick = async () => {
       if (!canClickPayment) return;
@@ -897,11 +898,21 @@ export default function OrderDetailPage({ params }: PageProps) {
             type="button"
             disabled={!canClickPayment}
             aria-disabled={!canClickPayment}
-            aria-busy={paymentFlow.busy || paymentFlow.polling}
+            aria-busy={paymentActionLocked}
             onClick={handlePaymentClick}
             className="w-full py-3.5 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-full hover:opacity-90 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#3C9984]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
           >
-            {paymentFlow.polling ? "Checking Payment..." : paymentFlow.busy ? "Preparing Payment..." : "Pay Now"}
+            {paymentFlow.polling || paymentFlow.reconciling ? "Checking Payment..." : paymentFlow.busy ? "Preparing Payment..." : "Pay Now"}
+          </button>
+        )}
+        {paymentFlow.payment && paymentFlow.reconciling && !paymentFlow.polling && (
+          <button
+            type="button"
+            disabled={paymentFlow.busy}
+            onClick={() => void paymentFlow.checkPaymentStatus()}
+            className="w-full py-3 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/20 text-xs font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer text-on-surface disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Check payment status
           </button>
         )}
       </section>
@@ -932,6 +943,7 @@ export default function OrderDetailPage({ params }: PageProps) {
         {isCancellable && (
           <button
             type="button"
+            disabled={paymentActionLocked}
             onClick={() => {
               setCancelReason("");
               setCancelError("");
@@ -941,10 +953,15 @@ export default function OrderDetailPage({ params }: PageProps) {
               );
               setIsCancelOpen(true);
             }}
-            className="w-full py-3 bg-error/10 hover:bg-error text-error hover:text-white font-bold text-xs uppercase tracking-widest rounded-full transition-all border border-error/30 cursor-pointer"
+            className="w-full py-3 bg-error/10 hover:bg-error text-error hover:text-white font-bold text-xs uppercase tracking-widest rounded-full transition-all border border-error/30 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel Unshipped Items
           </button>
+        )}
+        {paymentActionLocked && isCancellable && (
+          <p className="text-xs font-semibold text-on-surface-variant rounded-xl bg-surface-container-high/40 p-3">
+            Cancellation is paused while payment status is being verified.
+          </p>
         )}
         {isReturnable && (
           <button

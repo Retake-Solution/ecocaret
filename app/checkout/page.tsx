@@ -618,23 +618,6 @@ export default function CheckoutPage() {
                     </span>
                   </div>
                 </div>
-
-                <div className="rounded-2xl border border-outline-variant/10 bg-surface-container-lowest p-4 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <span className="material-symbols-outlined text-primary" style={{ color: THEME_COLORS.global.primary }}>
-                      account_balance_wallet
-                    </span>
-                    <div>
-                      <p className="font-label-md text-label-md font-bold text-on-surface uppercase tracking-wider">
-                        Payment Next
-                      </p>
-                      <p className="text-xs text-on-surface-variant leading-relaxed mt-1">
-                        We will create your order first. If payment is required, the order status page will show a clear Pay Now action.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
                 <button
                   type="submit"
                   disabled={isSubmitting}

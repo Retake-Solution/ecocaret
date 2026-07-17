@@ -364,10 +364,11 @@ export const listOrderPayments = async (orderId: string): Promise<CustomerPaymen
 
 export const getOrderPayment = async (
   orderId: string,
-  paymentId: string
+  paymentId: string,
+  signal?: AbortSignal
 ): Promise<CustomerPaymentResult> => {
   try {
-    const response = await apiClient.get(`/api/v1/orders/${orderId}/payments/${paymentId}`);
+    const response = await apiClient.get(`/api/v1/orders/${orderId}/payments/${paymentId}`, { signal });
     const json = response.data;
     if (!json?.success || !json?.data) {
       throw new Error(json?.message || "Unable to load payment status.");
@@ -375,6 +376,32 @@ export const getOrderPayment = async (
     return json;
   } catch (error) {
     throw getApiError(error, "Unable to load payment status.");
+  }
+};
+
+export const abandonOrderPayment = async (
+  orderId: string,
+  paymentId: string,
+  idempotencyKey: string
+): Promise<CustomerPaymentResult & { httpStatus: number }> => {
+  try {
+    const response = await apiClient.post(
+      `/api/v1/orders/${orderId}/payments/${paymentId}/abandon`,
+      {},
+      {
+        headers: {
+          "Idempotency-Key": idempotencyKey,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    const json = response.data;
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to check payment status.");
+    }
+    return { ...json, httpStatus: response.status };
+  } catch (error) {
+    throw getApiError(error, "Unable to check payment status.");
   }
 };
 

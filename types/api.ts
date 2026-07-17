@@ -207,7 +207,7 @@ export interface SingleOrderResult {
 
 export type PaymentProvider = "stripe" | "razorpay";
 
-export type CustomerPaymentStatus =
+export type PaymentStatus =
   | "created"
   | "requires_action"
   | "processing"
@@ -218,6 +218,8 @@ export type CustomerPaymentStatus =
   | "expired"
   | "unknown"
   | "review_required";
+
+export type CustomerPaymentStatus = PaymentStatus;
 
 export interface RazorpayCheckoutAction {
   type: "razorpay_checkout";

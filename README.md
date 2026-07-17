@@ -19,6 +19,7 @@ This README documents the customer-facing frontend in this repository and the ba
 - [Security and Compliance Rules](#security-and-compliance-rules)
 - [Testing Checklist](#testing-checklist)
 - [Operations and Release Notes](#operations-and-release-notes)
+- [Detailed Checkout Guide](#detailed-checkout-guide)
 
 ## System Overview
 
@@ -47,6 +48,7 @@ flowchart LR
 | Frontend API client | `services/api.ts` | Uses `apiClient` with bearer token injection. |
 | Frontend order detail page | `app/orders/[id]/page.tsx` | Order, payment, cancellation, return, shipment UI. |
 | Frontend types | `types/api.ts` | Customer-safe DTO contracts. |
+| Detailed checkout doc | `CHECK_OUT.md` | Full checkout, payment recovery, order action, and customer ledger guide. |
 
 ## Actors and RBAC
 
@@ -78,6 +80,7 @@ Customer routes must never expose cross-customer data. Missing and unauthorized 
 | Amounts | All money values are integer minor units, formatted in the frontend with backend `currency`. |
 | Order pricing | Backend authoritative. Frontend does not submit final amount, tax, shipping, refund, capture, or provider metadata. |
 | Payment proof | Browser redirects/callbacks are not proof. Backend verification/webhook/provider retrieval is authoritative. |
+| Checkout dismissal | Closing Razorpay Checkout is not payment failure; the frontend reports abandonment and polls backend status. |
 | Refund proof | Customer frontend never starts Razorpay/Stripe refunds and never marks refunds complete. |
 | Inventory reservation | Reserved at order creation; released by valid unshipped cancellation; committed when shipment reaches shipped. |
 | Cancellation scope | Only unshipped quantity can be cancelled. Shipped quantity must use Return/RMA. |
@@ -186,9 +189,16 @@ sequenceDiagram
   FE->>Pay: POST /orders/:id/payments
   Pay-->>FE: clientAction razorpay_checkout
   FE->>RP: Open Checkout with backend values
-  RP-->>FE: razorpay_order_id/payment_id/signature
-  FE->>Pay: POST /payments/:paymentId/verify-razorpay
-  Pay-->>FE: paid OR processing/review state
+  alt Customer completes Razorpay payment
+    RP-->>FE: razorpay_order_id/payment_id/signature
+    FE->>Pay: POST /payments/:paymentId/verify-razorpay
+    Pay-->>FE: paid OR non-terminal state
+  else Customer closes Checkout
+    RP-->>FE: modal.ondismiss
+    FE->>Pay: POST /payments/:paymentId/abandon
+    Pay-->>FE: 200 terminal OR 202/non-terminal
+  end
+  FE->>Pay: Poll GET /payments/:paymentId when needed
   FE->>API: Refresh order/payment state
 ```
 
@@ -198,6 +208,9 @@ Payment rules:
 - Frontend does not submit amount, currency, capture method, user ID, callback URL, provider secret, or refund details.
 - Razorpay success payload is mapped from snake_case to backend camelCase.
 - Paid UI appears only after backend verification returns `paid` or refreshed order state shows paid.
+- Razorpay `ondismiss` is handled through the backend abandon endpoint; the frontend must not mark the payment failed locally.
+- The internal backend payment ID is used for verify, abandon, and status URLs. Do not substitute Razorpay provider IDs.
+- While payment is busy, polling, or reconciling, Pay Now and customer cancellation are disabled.
 
 ### Cancellation-First Refund Flow
 
@@ -363,6 +376,33 @@ GET /api/v1/orders/:orderId/payments/:paymentId
 Authorization: Bearer <token>
 ```
 
+### Abandon/Dismiss Razorpay Payment
+
+Used when the Razorpay Checkout modal is closed before a success callback.
+
+```http
+POST /api/v1/orders/:orderId/payments/:paymentId/abandon
+Authorization: Bearer <token>
+Content-Type: application/json
+Idempotency-Key: payment-abandon:<paymentId>
+```
+
+```json
+{}
+```
+
+Response can be `200` when the backend has reconciled provider state, or `202` when reconciliation is still pending.
+
+Frontend behavior:
+
+| Result | Frontend Behavior |
+| --- | --- |
+| `paid` | Stop polling, refresh order, continue successful-payment flow. |
+| `failed` / `cancelled` / `expired` | Stop polling, show "Payment was not completed.", refresh order, allow retry only if order is otherwise payable. |
+| `created` / `requires_action` / `processing` / `authorized` / `unknown` / `review_required` | Keep retry and cancellation disabled; continue polling. |
+| HTTP `202` | Start polling the existing payment-status endpoint. |
+| API error | Do not mark failed locally; show warning and poll status when possible. |
+
 ### Cancel Unshipped Items
 
 ```http
@@ -525,10 +565,13 @@ Admin APIs require bearer authentication plus RBAC.
 | `services/api.ts` | Typed customer API methods. |
 | `types/api.ts` | Customer DTOs and status unions. |
 | `lib/idempotency.ts` | Stable idempotency key generation/storage. |
+| `lib/paymentStatusRules.ts` | Shared payment terminal/pollable status helpers. |
 | `lib/razorpayCheckout.ts` | Browser-only Razorpay loader and callback mapping. |
-| `hooks/useRazorpayPayment.ts` | Payment creation, provider action, verification, polling. |
+| `hooks/useRazorpayPayment.ts` | Payment creation, provider action, verification, dismiss/abandon, polling, manual status checks. |
+| `app/checkout/page.tsx` | Auth-gated checkout form, order creation, cart-to-order payload mapping, redirect to order detail. |
 | `app/orders/[id]/page.tsx` | Order detail, payment, cancellation, return, shipment UI. |
 | `components/OrderTimeline.tsx` | Compact order event timeline. |
+| `CHECK_OUT.md` | Expanded checkout and order workflow documentation. |
 
 ### Payment UI Rules
 
@@ -538,6 +581,17 @@ Show `Pay Now` only when all are true:
 - order is not fully cancelled
 - reservation-expired rule does not block payment
 - payment status is not `paid`, `not_required`, `refund_pending`, `partially_refunded`, `refunded`, `disputed`, `review_required`, or `cancelled`
+- `useRazorpayPayment` is not `busy`, `polling`, or `reconciling`
+
+Payment recovery rules:
+
+- Payment attempt details are stored in `sessionStorage` per order.
+- If `PAYMENT_ACTIVE_ATTEMPT_EXISTS` occurs, recover the latest active Razorpay payment instead of blindly creating another attempt.
+- Razorpay success sets `paymentCallbackStartedRef` before backend verification to prevent abandon races.
+- Razorpay dismiss sets `abandonmentStartedRef` and calls `/abandon` once with `payment-abandon:<paymentId>`.
+- Poll payment status every 2.5-3 seconds for up to 60 seconds when provider reconciliation is pending.
+- Use `AbortController` to cancel in-flight payment-status requests during cleanup/unmount.
+- On polling timeout, keep the payment non-terminal and show manual `Check payment status`; do not enable retry solely because of timeout.
 
 ### Cancellation UI Rules
 
@@ -593,6 +647,9 @@ Display `Request Return` when at least one item has `returnableQuantity > 0`.
 | `ORDER_RESERVATION_RELEASE_CONFLICT` | Refresh order; require explicit retry. |
 | `ORDER_SHIPMENT_QUANTITY_CONFLICT` | Refresh order; require explicit retry. |
 | `ORDER_RETURN_QUANTITY_CONFLICT` | Refresh order and return list; require explicit retry. |
+| Razorpay Checkout dismissed | Call `/payments/:paymentId/abandon`; show "Payment window closed. We're checking your payment status." |
+| Abandon request failed | Do not mark failed locally; show "We could not confirm the payment status yet. Please wait or check your order status." and poll when possible. |
+| Payment polling timeout | Keep payment non-terminal; show "Payment verification is taking longer than expected. Check your order status before retrying." |
 | Validation errors | Keep modal open and show safe message. |
 | Network timeout | Preserve idempotency key for retry of same payload. |
 | Provider unavailable | Preserve payment attempt state; allow safe retry where applicable. |
@@ -605,6 +662,7 @@ Mutation endpoints use `Idempotency-Key`.
 | --- | --- | --- |
 | Order creation | one checkout submission | component/session state |
 | Payment creation | one order payment attempt | `sessionStorage` per order |
+| Payment abandonment | one Razorpay dismiss for the internal payment id | `payment-abandon:<paymentId>` |
 | Cancellation | one logical cancellation payload | `sessionStorage` key `eco_caret_cancel_<orderId>` |
 | Return creation | one logical return payload | `sessionStorage` key `eco_caret_return_<orderId>` |
 
@@ -631,7 +689,7 @@ Rules:
 
 ## Testing Checklist
 
-The current frontend repo has no unit-test script in `package.json`; add tests when a test runner is introduced. Required coverage:
+The repo includes a focused Node test for Razorpay payment status and abandon rules at `tests/razorpay-payment-rules.test.mts`. Keep expanding coverage as checkout and order behavior grows. Required coverage:
 
 | Area | Test |
 | --- | --- |
@@ -646,6 +704,11 @@ The current frontend repo has no unit-test script in `package.json`; add tests w
 | Return pagination | Cursor pagination appends without duplicates. |
 | Customer DTO safety | No inspection notes/internal IDs/provider refund IDs exposed. |
 | Payment gating | Pay Now hidden for refund-related states. |
+| Razorpay dismiss | Calls abandon endpoint once with internal payment id and stable idempotency key. |
+| Razorpay success race | Success callback prevents abandonment before backend verification starts. |
+| Payment polling | HTTP 202 and non-terminal statuses keep retry/cancellation disabled and poll status. |
+| Polling timeout | Keeps payment non-terminal and exposes manual status check. |
+| Cleanup | Timers and in-flight payment-status requests are cleaned up on unmount. |
 | Provider refunds | Frontend never calls Razorpay/Stripe refund APIs. |
 | States | Loading, empty, validation, conflict, rate-limit, server error. |
 
@@ -654,6 +717,7 @@ Validation commands used in this repo:
 ```bash
 npx.cmd tsc --noEmit --pretty false
 npm.cmd run lint
+node --test tests/razorpay-payment-rules.test.mts
 npm.cmd run build
 ```
 
@@ -677,6 +741,20 @@ Production readiness requires:
 - Reuse `services/api.ts` and typed DTOs; do not use ad hoc fetch calls.
 - Keep all money in minor units until formatting for display.
 - Refresh order and return list after cancellation or return mutation.
+- Refresh order after paid, terminal payment, cancellation, return conflict, or payment reconciliation completion.
 - Treat stale versions as a user-visible retry condition, not an automatic resubmit.
 - Preserve Razorpay/Stripe support; do not remove provider-aware code.
 - Add abstractions only where they reduce duplication or enforce business rules.
+
+## Detailed Checkout Guide
+
+For the expanded customer checkout and order-status implementation guide, see [`CHECK_OUT.md`](CHECK_OUT.md).
+
+That document includes:
+
+- `/checkout` authentication, empty cart, validation, address mapping, and place-order behavior.
+- Cart item parsing into `PlaceOrderPayload`.
+- Order detail payment entry rules.
+- Razorpay success, dismiss, abandon, polling, timeout, and manual status-check flow.
+- Cancellation, return, refund, shipment, invoice, and timeline behavior.
+- Endpoint examples, payload examples, status tables, and frontend safety rules.
