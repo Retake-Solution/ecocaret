@@ -8,6 +8,7 @@ import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import ProfileDialog from "@/components/ProfileDialog";
 import OrderTimeline from "@/components/OrderTimeline";
+import Button from "@/components/Button";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { setCartOpen, removeFromCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
@@ -26,6 +27,13 @@ import {
 import { clearStoredIdempotencyKey, getStoredIdempotencyKey } from "@/lib/idempotency";
 import { CustomerCancellation, CustomerReturn, OrderData, OrderEvent, OrderItem, ShipmentData } from "@/types";
 import { useRazorpayPayment } from "@/hooks/useRazorpayPayment";
+import {
+  ACTIVE_RETURN_STATUSES,
+  PAYMENT_ACTION_BLOCKED_STATUSES,
+  PAYMENT_STATUS_LABELS,
+  RETURN_REFUND_LABELS,
+  RETURN_STATUS_LABELS,
+} from "@/constants/orderDetail";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -74,64 +82,6 @@ const getShipmentStatusDetails = (status: string) => {
       return { label: status, color: "#6B7280", bgColor: "rgba(107, 114, 128, 0.1)" };
   }
 };
-
-const PAYMENT_ACTION_BLOCKED_STATUSES = new Set([
-  "paid",
-  "not_required",
-  "refund_pending",
-  "partially_refunded",
-  "refunded",
-  "disputed",
-  "cancelled",
-  "review_required",
-]);
-
-const PAYMENT_STATUS_LABELS: Record<string, string> = {
-  created: "Payment required",
-  requires_action: "Payment required",
-  pending: "Payment required",
-  processing: "Payment verification in progress",
-  unknown: "Payment verification in progress",
-  authorized: "Payment authorized",
-  paid: "Paid",
-  captured: "Paid",
-  failed: "Payment failed",
-  cancelled: "Payment cancelled",
-  expired: "Payment session expired",
-  refund_pending: "Cancellation completed. Your refund is pending.",
-  partially_refunded: "Part of your refund has been completed.",
-  review_required: "Payment requires support review",
-  not_required: "Payment not required",
-  refunded: "Refund completed.",
-};
-
-const RETURN_STATUS_LABELS: Record<string, string> = {
-  return_requested: "Return requested",
-  return_in_transit: "Return in transit",
-  return_received: "Received by warehouse",
-  inspection_approved: "Inspection approved",
-  inspection_rejected: "Inspection rejected",
-  refund_processing: "Refund processing",
-  refunded: "Refund completed",
-  return_rejected: "Return rejected",
-  cancelled: "Return cancelled",
-};
-
-const RETURN_REFUND_LABELS: Record<string, string> = {
-  not_eligible: "Not eligible",
-  refund_pending: "Refund pending",
-  partially_refunded: "Partially refunded",
-  refunded: "Refund completed",
-  review_required: "Requires review",
-};
-
-const ACTIVE_RETURN_STATUSES = new Set([
-  "return_requested",
-  "return_in_transit",
-  "return_received",
-  "inspection_approved",
-  "refund_processing",
-]);
 
 const formatCurrencyMinor = (amountMinor: number, currency: string) =>
   new Intl.NumberFormat("en-US", {
@@ -770,7 +720,8 @@ export default function OrderDetailPage({ params }: PageProps) {
             </div>
           </div>
           
-          <button
+          <Button
+            unstyled
             onClick={handleDownloadInvoice}
             disabled={isDownloading}
             className="flex items-center gap-2 px-6 py-3.5 bg-surface-container hover:bg-[#3C9984]/10 border border-outline-variant/20 rounded-full font-label-md text-label-md text-secondary hover:text-primary transition-all group cursor-pointer w-full md:w-auto justify-center disabled:opacity-50 disabled:cursor-not-allowed"
@@ -783,7 +734,7 @@ export default function OrderDetailPage({ params }: PageProps) {
             <span className="font-bold uppercase tracking-wider">
               {isDownloading ? "Generating PDF..." : "Download Invoice"}
             </span>
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -894,7 +845,8 @@ export default function OrderDetailPage({ params }: PageProps) {
         )}
 
         {needsPayment && (
-          <button
+          <Button
+            unstyled
             type="button"
             disabled={!canClickPayment}
             aria-disabled={!canClickPayment}
@@ -903,17 +855,18 @@ export default function OrderDetailPage({ params }: PageProps) {
             className="w-full py-3.5 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-full hover:opacity-90 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#3C9984]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container-low"
           >
             {paymentFlow.polling || paymentFlow.reconciling ? "Checking Payment..." : paymentFlow.busy ? "Preparing Payment..." : "Pay Now"}
-          </button>
+          </Button>
         )}
         {paymentFlow.payment && paymentFlow.reconciling && !paymentFlow.polling && (
-          <button
+          <Button
+            unstyled
             type="button"
             disabled={paymentFlow.busy}
             onClick={() => void paymentFlow.checkPaymentStatus()}
             className="w-full py-3 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/20 text-xs font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer text-on-surface disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Check payment status
-          </button>
+          </Button>
         )}
       </section>
     );
@@ -941,7 +894,8 @@ export default function OrderDetailPage({ params }: PageProps) {
           </div>
         )}
         {isCancellable && (
-          <button
+          <Button
+            unstyled
             type="button"
             disabled={paymentActionLocked}
             onClick={() => {
@@ -956,7 +910,7 @@ export default function OrderDetailPage({ params }: PageProps) {
             className="w-full py-3 bg-error/10 hover:bg-error text-error hover:text-white font-bold text-xs uppercase tracking-widest rounded-full transition-all border border-error/30 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel Unshipped Items
-          </button>
+          </Button>
         )}
         {paymentActionLocked && isCancellable && (
           <p className="text-xs font-semibold text-on-surface-variant rounded-xl bg-surface-container-high/40 p-3">
@@ -964,7 +918,8 @@ export default function OrderDetailPage({ params }: PageProps) {
           </p>
         )}
         {isReturnable && (
-          <button
+          <Button
+            unstyled
             type="button"
             onClick={() => {
               setReturnReason("");
@@ -978,7 +933,7 @@ export default function OrderDetailPage({ params }: PageProps) {
             className="w-full py-3 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-full hover:opacity-90 transition-all cursor-pointer"
           >
             Request Return
-          </button>
+          </Button>
         )}
       </div>
     );
@@ -992,7 +947,8 @@ export default function OrderDetailPage({ params }: PageProps) {
             Return Requests
           </h3>
           {isReturnable && (
-            <button
+            <Button
+              unstyled
               type="button"
               onClick={() => {
                 setReturnReason("");
@@ -1006,7 +962,7 @@ export default function OrderDetailPage({ params }: PageProps) {
               className="px-5 py-2.5 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-full hover:opacity-90 transition-all"
             >
               Request Return
-            </button>
+            </Button>
           )}
         </div>
 
@@ -1026,7 +982,8 @@ export default function OrderDetailPage({ params }: PageProps) {
               const isExpanded = expandedReturnId === returnRequest.id;
               return (
                 <div key={returnRequest.id} className="rounded-2xl border border-outline-variant/10 bg-surface-container-high/30 p-4">
-                  <button
+                  <Button
+                    unstyled
                     type="button"
                     onClick={() => setExpandedReturnId(isExpanded ? null : returnRequest.id)}
                     className="w-full text-left flex items-start justify-between gap-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#3C9984]/25 rounded-xl"
@@ -1048,7 +1005,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                         {isExpanded ? "expand_less" : "expand_more"}
                       </span>
                     </div>
-                  </button>
+                  </Button>
                   {isExpanded && (
                     <div className="mt-4 pt-4 border-t border-outline-variant/10 space-y-3 text-xs">
                       <p className="text-on-surface-variant">
@@ -1075,14 +1032,15 @@ export default function OrderDetailPage({ params }: PageProps) {
               );
             })}
             {returnsHasMore && (
-              <button
+              <Button
+                unstyled
                 type="button"
                 disabled={loadingMoreReturns}
                 onClick={loadMoreReturns}
                 className="w-full py-2.5 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/20 text-xs font-bold uppercase tracking-wider rounded-full transition-all cursor-pointer text-on-surface disabled:opacity-50"
               >
                 {loadingMoreReturns ? "Loading..." : "Load More Returns"}
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -1712,21 +1670,23 @@ export default function OrderDetailPage({ params }: PageProps) {
               )}
 
               <div className="flex gap-4">
-                <button
+                <Button
+                  unstyled
                   type="button"
                   disabled={isCancelling}
                   onClick={() => setIsCancelOpen(false)}
                   className="flex-1 py-3 bg-surface-container-highest hover:bg-outline-variant/30 text-on-surface font-bold text-xs uppercase tracking-widest rounded-full transition-all cursor-pointer"
                 >
                   Go Back
-                </button>
-                <button
+                </Button>
+                <Button
+                  unstyled
                   type="submit"
                   disabled={isCancelling || !cancelReason.trim() || Object.values(cancelQuantities).every((quantity) => quantity <= 0)}
                   className="flex-1 py-3 bg-error text-white font-bold text-xs uppercase tracking-widest rounded-full hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
                 >
                   {isCancelling ? "Cancelling..." : "Confirm"}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -1803,21 +1763,23 @@ export default function OrderDetailPage({ params }: PageProps) {
               )}
 
               <div className="flex gap-4">
-                <button
+                <Button
+                  unstyled
                   type="button"
                   disabled={isReturning}
                   onClick={() => setIsReturnOpen(false)}
                   className="flex-1 py-3 bg-surface-container-highest hover:bg-outline-variant/30 text-on-surface font-bold text-xs uppercase tracking-widest rounded-full transition-all cursor-pointer"
                 >
                   Go Back
-                </button>
-                <button
+                </Button>
+                <Button
+                  unstyled
                   type="submit"
                   disabled={isReturning || !returnReason.trim() || Object.values(returnQuantities).every((quantity) => quantity <= 0)}
                   className="flex-1 py-3 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-full hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
                 >
                   {isReturning ? "Submitting..." : "Request Return"}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -1854,9 +1816,9 @@ export default function OrderDetailPage({ params }: PageProps) {
               {toast.type === "error" ? "error" : toast.type === "warning" ? "warning" : "check_circle"}
             </span>
             <span>{toast.message}</span>
-            <button onClick={() => setToast(null)} className="ml-auto opacity-60 hover:opacity-100 flex items-center">
+            <Button unstyled onClick={() => setToast(null)} className="ml-auto opacity-60 hover:opacity-100 flex items-center">
               <span className="material-symbols-outlined text-sm">close</span>
-            </button>
+            </Button>
           </div>
         </div>
       )}

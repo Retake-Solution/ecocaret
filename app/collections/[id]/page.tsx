@@ -4,6 +4,12 @@ import { notFound } from "next/navigation";
 import { fetchProductById, fetchProducts } from "@/services/api";
 import ProductDetailsClient from "./ProductDetailsClient";
 import Footer from "@/components/Footer";
+import {
+  PRODUCT_DETAIL_METADATA_FALLBACK_TITLE,
+  PRODUCT_DETAIL_METADATA_TITLE_SUFFIX,
+  PRODUCT_DETAIL_NOT_FOUND_TITLE,
+  PRODUCT_DETAIL_SUGGESTED_LIMIT,
+} from "@/constants/productDetail";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -15,12 +21,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!product) {
     return {
-      title: "Product Not Found | Eco Caret",
+      title: PRODUCT_DETAIL_NOT_FOUND_TITLE,
     };
   }
 
   return {
-    title: `${product.metaTitle || product.name || product.title || "Product"} | Eco Caret - Ethical Brilliance`,
+    title: `${product.metaTitle || product.name || product.title || PRODUCT_DETAIL_METADATA_FALLBACK_TITLE}${PRODUCT_DETAIL_METADATA_TITLE_SUFFIX}`,
     description: product.metaDescription || product.description || product.shortDescription,
   };
 }
@@ -35,7 +41,9 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   // Get other products for recommendation
   const allProducts = await fetchProducts();
-  const suggestedProducts = allProducts.filter((p) => p._id !== id).slice(0, 3);
+  const suggestedProducts = allProducts
+    .filter((p) => p._id !== id)
+    .slice(0, PRODUCT_DETAIL_SUGGESTED_LIMIT);
 
   return (
     <>

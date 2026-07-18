@@ -27,26 +27,43 @@ import {
   CustomerPaymentResult,
   VerifyRazorpayPayload,
 } from "@/types";
+import { buildProfileUpdateBody, type ProfileEditValues } from "@/lib/profileEdit";
+import { buildRegistrationRequestBody } from "@/lib/registration";
+import type { ProfileUser } from "@/lib/features/profile/profileSlice";
+
+export interface ApiFieldError {
+  field: string;
+  message: string;
+}
 
 export class ApiRequestError extends Error {
   status?: number;
   code?: string;
+  fieldErrors?: ApiFieldError[];
 
-  constructor(message: string, status?: number, code?: string) {
+  constructor(message: string, status?: number, code?: string, fieldErrors?: ApiFieldError[]) {
     super(message);
     this.name = "ApiRequestError";
     this.status = status;
     this.code = code;
+    this.fieldErrors = fieldErrors;
   }
 }
 
 const getApiError = (error: unknown, fallback: string) => {
   if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { message?: string; code?: string; error?: string } | undefined;
+    const data = error.response?.data as {
+      message?: string;
+      code?: string;
+      error?: string;
+      errors?: ApiFieldError[];
+    } | undefined;
+    const firstFieldError = data?.errors?.[0]?.message;
     return new ApiRequestError(
-      data?.message || fallback,
+      data?.message || firstFieldError || fallback,
       error.response?.status,
-      data?.code || data?.error
+      data?.code || data?.error,
+      data?.errors
     );
   }
 
@@ -83,9 +100,13 @@ export const login = async ({ email, password }: LoginCredentials): Promise<Logi
   }
 };
 
-export const register = async (credentials: RegisterCredentials): Promise<LoginResult> => {
+export const register = async (
+  credentials: RegisterCredentials,
+  selectedImage?: File | null
+): Promise<LoginResult> => {
   try {
-    const response = await apiClient.post("/api/v1/auth/register", credentials);
+    const request = buildRegistrationRequestBody(credentials, selectedImage);
+    const response = await apiClient.post("/api/v1/auth/register", request.body);
     const json = response.data;
 
     if (!json?.success || !json?.data || !json?.token) {
@@ -376,6 +397,25 @@ export const getOrderPayment = async (
     return json;
   } catch (error) {
     throw getApiError(error, "Unable to load payment status.");
+  }
+};
+
+export const updateCurrentUser = async (
+  values: ProfileEditValues,
+  selectedFile?: File | null
+): Promise<ProfileUser> => {
+  try {
+    const request = buildProfileUpdateBody(values, selectedFile);
+    const response = await apiClient.put("/api/v1/auth/me", request.body);
+    const json = response.data;
+
+    if (!json?.success || !json?.data) {
+      throw new Error(json?.message || "Unable to update profile. Please try again.");
+    }
+
+    return json.data;
+  } catch (error) {
+    throw getApiError(error, "Unable to update profile. Please try again.");
   }
 };
 

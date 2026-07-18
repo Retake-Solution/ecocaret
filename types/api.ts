@@ -1,5 +1,7 @@
 import { ApiProduct } from "./index";
 import type { ProfileUser } from "@/lib/features/profile/profileSlice";
+import type { ProfileEditValues } from "@/lib/profileEdit";
+import type { ProfileGender } from "@/constants/profile";
 
 export interface LoginCredentials {
   email: string;
@@ -22,14 +24,18 @@ export interface RegisterCredentials {
   name: string;
   email: string;
   password: string;
-  residentialAddress: AddressInput;
-  shippingAddresses: AddressInput[];
+  gender?: ProfileGender | "";
+  residentialAddress?: AddressInput | null;
+  shippingAddresses?: AddressInput[];
 }
 
 export interface LoginResult {
   user: ProfileUser;
   token: string;
 }
+
+export type { ProfileEditValues };
+export type Gender = ProfileGender;
 
 export interface ProductFilters {
   category?: string;

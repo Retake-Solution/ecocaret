@@ -6,21 +6,23 @@ import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProfileDialog from "@/components/ProfileDialog";
+import Button from "@/components/Button";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { clearCart, setCartOpen } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import { THEME_COLORS } from "@/theme/colors";
 import { placeOrder } from "@/services/api";
+import {
+  CHECKOUT_COUNTRY_CODE_LABELS,
+  CHECKOUT_COUNTRY_CODES,
+  CHECKOUT_COUNTRY_OPTIONS,
+  DEFAULT_CHECKOUT_COUNTRY,
+} from "@/constants/checkout";
 
 const mapCountryCodeToName = (code?: string) => {
-  if (!code) return "United Kingdom";
+  if (!code) return DEFAULT_CHECKOUT_COUNTRY;
   const norm = code.toUpperCase();
-  if (norm === "US") return "United States";
-  if (norm === "GB" || norm === "UK") return "United Kingdom";
-  if (norm === "BE") return "Belgium";
-  if (norm === "FR") return "France";
-  if (norm === "DE") return "Germany";
-  return "United Kingdom";
+  return CHECKOUT_COUNTRY_CODE_LABELS[norm] || DEFAULT_CHECKOUT_COUNTRY;
 };
 
 export default function CheckoutPage() {
@@ -50,7 +52,7 @@ export default function CheckoutPage() {
     address: "",
     city: "",
     postalCode: "",
-    country: "United Kingdom",
+    country: DEFAULT_CHECKOUT_COUNTRY,
     phone: "",
   });
 
@@ -141,7 +143,7 @@ export default function CheckoutPage() {
       city: form.city,
       state: form.city,
       postalCode: form.postalCode,
-      country: form.country === "United Kingdom" ? "GB" : form.country === "United States" ? "US" : form.country === "Belgium" ? "BE" : form.country === "France" ? "FR" : "DE",
+      country: CHECKOUT_COUNTRY_CODES[form.country] || "DE",
       phone: form.phone,
     };
 
@@ -243,14 +245,15 @@ export default function CheckoutPage() {
                   Please sign in before checkout so we can reserve inventory and verify payment securely.
                 </p>
               </div>
-              <button
+              <Button
+                unstyled
                 type="button"
                 onClick={() => dispatch(setProfileOpen(true))}
                 className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold uppercase tracking-wider hover:bg-primary/90 transition-all cursor-pointer"
                 style={{ backgroundColor: THEME_COLORS.global.primary }}
               >
                 Sign In / Register
-              </button>
+              </Button>
             </div>
           </div>
         ) : isSubmitting ? (
@@ -519,11 +522,11 @@ export default function CheckoutPage() {
                       onChange={handleChange}
                       className="w-full rounded-xl border border-outline-variant px-5 py-3.5 bg-surface-bright outline-none focus:border-primary"
                     >
-                      <option value="United Kingdom">United Kingdom</option>
-                      <option value="Belgium">Belgium</option>
-                      <option value="United States">United States</option>
-                      <option value="France">France</option>
-                      <option value="Germany">Germany</option>
+                      {CHECKOUT_COUNTRY_OPTIONS.map((country) => (
+                        <option key={country} value={country}>
+                          {country}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -547,7 +550,8 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <button
+              <Button
+                unstyled
                 type="submit"
                 disabled={isSubmitting}
                 aria-disabled={isSubmitting}
@@ -558,7 +562,7 @@ export default function CheckoutPage() {
                 <span className="material-symbols-outlined text-sm">
                   lock
                 </span>
-              </button>
+              </Button>
 
             </form>
 
@@ -618,7 +622,8 @@ export default function CheckoutPage() {
                     </span>
                   </div>
                 </div>
-                <button
+                <Button
+                  unstyled
                   type="submit"
                   disabled={isSubmitting}
                   aria-disabled={isSubmitting}
@@ -634,7 +639,7 @@ export default function CheckoutPage() {
                   <span className="material-symbols-outlined text-sm">
                     lock
                   </span>
-                </button>
+                </Button>
               </div>
 
               <div className="flex gap-4 p-4 border border-outline-variant/10 rounded-2xl bg-surface-container-lowest text-xs text-on-surface-variant items-start">

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useAppSelector } from "@/lib/store";
+import { getProfileAvatarDisplay } from "@/lib/profileEdit";
 import { THEME_COLORS } from "@/theme/colors";
 
 interface HeaderProps {
@@ -204,6 +205,7 @@ export default function Header({
 }: HeaderProps) {
   const user = useAppSelector((state) => state.profile.user);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const avatar = getProfileAvatarDisplay(user);
 
   const renderMobileMenu = () => {
     return (
@@ -609,13 +611,17 @@ export default function Header({
         {user ? (
           <Link
             href="/profile"
-            className="w-8 h-8 rounded-full bg-secondary-fixed-dim overflow-hidden ring-1 ring-primary/20 cursor-pointer block hover:scale-105 transition-transform"
+            className="w-8 h-8 rounded-full bg-secondary-fixed-dim overflow-hidden ring-1 ring-primary/20 cursor-pointer flex items-center justify-center hover:scale-105 transition-transform text-[11px] font-bold text-primary"
           >
-            <img
-              alt="Customer profile avatar"
-              className="w-full h-full object-cover"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDzzmq3JexhIO7YpZClTn2dZgaKmzZLA-d_J4uHyuEGx5Gs0gjAR-ReY_D-DtMsYkXP2eKvsP9gj5_D9dq7IPGQf56dg3tHPu86lqun_wyQr_oMjqt77wXTsLPKC5cXroZT1H3ryKU6zQcEyLqIdA6m6In0OkrVS3C7GBakrzfp8PLQExpvSE-CIAcOcMv17ybWiQZ3XRtifQS8MOPrsxi-_oN6A9FwQAcq5PXx8ZNmGugUYrE7HyfWWDpTQXwFKPN2VUoeiyysI0w"
-            />
+            {avatar.type === "image" ? (
+              <img
+                alt={avatar.alt}
+                className="w-full h-full object-cover"
+                src={avatar.url}
+              />
+            ) : (
+              <span>{avatar.initials}</span>
+            )}
           </Link>
         ) : (
           <button

@@ -80,7 +80,7 @@ const safePaymentMessage = (error: unknown) => {
         return "This payment requires support review before another attempt can be made.";
       case "PAYMENT_PROVIDER_UNAVAILABLE":
       case "PAYMENT_PROVIDER_DISABLED":
-        return "Razorpay payments are not available right now. Please try again later.";
+        return "Payments are not available right now. Please try again later.";
       case "PAYMENT_CONFIRMATION_MISMATCH":
       case "INVALID_SIGNATURE":
         return "Payment confirmation could not be verified. Please contact support.";
@@ -90,7 +90,7 @@ const safePaymentMessage = (error: unknown) => {
   }
 
   if (error instanceof Error && error.message.includes("Razorpay Checkout")) {
-    return "Razorpay Checkout could not be loaded. Please check your connection and try again.";
+    return "Checkout could not be loaded. Please check your connection and try again.";
   }
 
   return "Payment could not be completed. Please try again.";
@@ -325,7 +325,7 @@ export const useRazorpayPayment = ({
         setPayment(paymentForCheckout);
         setMessage({
           type: "warning",
-          text: "Stripe payment details were returned, but Razorpay is currently enabled for checkout.",
+          text: "Payment details were returned.",
         });
         return paymentForCheckout;
       }
@@ -351,7 +351,7 @@ export const useRazorpayPayment = ({
       activeCheckoutRef.current = true;
       paymentCallbackStartedRef.current = false;
       abandonmentStartedRef.current = false;
-      setMessage({ type: "info", text: "Opening Razorpay Checkout..." });
+      setMessage({ type: "info", text: "Opening Checkout..." });
 
       try {
         const checkoutResult = await openRazorpayCheckout(action, prefill, orderReference, {
@@ -514,7 +514,7 @@ export const useRazorpayPayment = ({
         }
 
         if (!recovered) {
-          setMessage({ type: "warning", text: "No active Razorpay payment attempt was found." });
+          setMessage({ type: "warning", text: "No active payment attempt was found." });
           return null;
         }
 

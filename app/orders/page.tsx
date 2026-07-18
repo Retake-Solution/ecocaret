@@ -7,60 +7,15 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import ProfileDialog from "@/components/ProfileDialog";
+import OrderCard from "@/components/OrderCard";
+import Button from "@/components/Button";
+import PaginationControls from "@/components/PaginationControls";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { setCartOpen, removeFromCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import { THEME_COLORS } from "@/theme/colors";
 import { getOrders } from "@/services/api";
 import { OrderData, GetOrdersParams } from "@/types";
-
-const getFulfillmentBadgeDetails = (status: string) => {
-  const norm = status.toLowerCase();
-  switch (norm) {
-    case "pending":
-      return { label: "Order Placed", color: "#6B7280", bgColor: "rgba(107, 114, 128, 0.1)" };
-    case "confirmed":
-      return { label: "Confirmed", color: "#3B82F6", bgColor: "rgba(59, 130, 246, 0.1)" };
-    case "crafting":
-      return { label: "Being Crafted", color: "#6366F1", bgColor: "rgba(99, 102, 241, 0.1)" };
-    case "quality_check":
-      return { label: "Quality Check", color: "#8B5CF6", bgColor: "rgba(139, 92, 246, 0.1)" };
-    case "ready_to_ship":
-      return { label: "Ready to Ship", color: "#0D9488", bgColor: "rgba(13, 148, 136, 0.1)" };
-    case "partially_shipped":
-      return { label: "Partially Shipped", color: "#D97706", bgColor: "rgba(217, 119, 6, 0.1)" };
-    case "shipped":
-      return { label: "Shipped", color: "#F97316", bgColor: "rgba(249, 115, 22, 0.1)" };
-    case "partially_delivered":
-      return { label: "Partially Delivered", color: "#F59E0B", bgColor: "rgba(245, 158, 11, 0.1)" };
-    case "delivered":
-      return { label: "Delivered", color: "#10B981", bgColor: "rgba(16, 185, 129, 0.1)" };
-    case "cancelled":
-      return { label: "Cancelled", color: "#EF4444", bgColor: "rgba(239, 68, 68, 0.1)" };
-    default:
-      return { label: status, color: "#6B7280", bgColor: "rgba(107, 114, 128, 0.1)" };
-  }
-};
-
-const getPaymentBadgeDetails = (status: string) => {
-  const norm = status.toLowerCase();
-  switch (norm) {
-    case "pending":
-      return { label: "Payment Pending", color: "#6B7280", bgColor: "rgba(107, 114, 128, 0.1)" };
-    case "authorized":
-      return { label: "Payment Authorized", color: "#3B82F6", bgColor: "rgba(59, 130, 246, 0.1)" };
-    case "paid":
-      return { label: "Paid", color: "#10B981", bgColor: "rgba(16, 185, 129, 0.1)" };
-    case "failed":
-      return { label: "Payment Failed", color: "#EF4444", bgColor: "rgba(239, 68, 68, 0.1)" };
-    case "partially_refunded":
-      return { label: "Partially Refunded", color: "#D97706", bgColor: "rgba(217, 119, 6, 0.1)" };
-    case "refunded":
-      return { label: "Refunded", color: "#F97316", bgColor: "rgba(249, 115, 22, 0.1)" };
-    default:
-      return { label: status, color: "#6B7280", bgColor: "rgba(107, 114, 128, 0.1)" };
-  }
-};
 
 export default function OrderHistory() {
   const dispatch = useAppDispatch();
@@ -222,12 +177,13 @@ export default function OrderHistory() {
                     className="w-full pl-12 pr-4 py-3 bg-surface-container rounded-full border border-outline-variant/10 text-sm text-on-surface focus:outline-none focus:border-primary transition-all"
                   />
                 </div>
-                <button
+                <Button
+                  unstyled
                   type="submit"
                   className="px-6 py-3 bg-primary text-white text-xs font-bold uppercase tracking-wider rounded-full hover:bg-secondary transition-all cursor-pointer"
                 >
                   Search
-                </button>
+                </Button>
               </form>
 
               {/* Quick status filter tabs */}
@@ -235,7 +191,8 @@ export default function OrderHistory() {
                 {["All", "Pending", "Shipped", "Delivered", "Cancelled"].map((status) => {
                   const isActive = fulfillmentFilter === status;
                   return (
-                    <button
+                    <Button
+                      unstyled
                       key={status}
                       onClick={() => {
                         setFulfillmentFilter(status);
@@ -249,7 +206,7 @@ export default function OrderHistory() {
                       }`}
                     >
                       {status}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
@@ -270,12 +227,13 @@ export default function OrderHistory() {
                 <div className="p-6 rounded-2xl bg-error-container/40 border border-error/20 text-center max-w-md mx-auto space-y-4">
                   <span className="material-symbols-outlined text-error text-4xl">error</span>
                   <p className="text-on-error-container font-medium">{error}</p>
-                  <button
+                  <Button
+                    unstyled
                     onClick={handleRetry}
                     className="bg-primary text-white px-6 py-2.5 rounded-full text-xs font-bold uppercase hover:bg-secondary transition-all cursor-pointer"
                   >
                     Retry
-                  </button>
+                  </Button>
                 </div>
               ) : orders.length === 0 ? (
                 /* Empty State */
@@ -299,102 +257,21 @@ export default function OrderHistory() {
               ) : (
                 /* Live Orders Map */
                 <div className="space-y-6 animate-fade-in">
-                  {orders.map((order) => {
-                    const firstItem = order.items[0];
-                    const imageSrc = firstItem?.productSnapshot?.imageUrl;
-                    const totalAmount = order.totals.totalMinor / 100;
-                    
-                    const { label: fulfillLabel, color: fulfillColor, bgColor: fulfillBg } = getFulfillmentBadgeDetails(order.fulfillmentStatus);
-                    const { label: payLabel, color: payColor, bgColor: payBg } = getPaymentBadgeDetails(order.paymentStatus);
-                    
-                    // Sum items count
-                    const itemsCount = order.items.reduce((sum, item) => sum + item.quantity.ordered, 0);
-
-                    return (
-                      <div key={order.id} className="order-card rounded-xl p-6 md:p-8 flex flex-col md:flex-row gap-8 items-center">
-                        <div className="w-full md:w-32 aspect-square overflow-hidden rounded-lg bg-surface-container-high flex-shrink-0 border border-outline-variant/10">
-                          <img
-                            alt={firstItem?.productSnapshot?.name || "Order item"}
-                            className="w-full h-full object-cover"
-                            src={imageSrc}
-                          />
-                        </div>
-                        <div className="flex-grow w-full grid grid-cols-1 md:grid-cols-4 gap-6 items-center">
-                          <div className="space-y-1">
-                            <span className="text-[10px] uppercase tracking-wider font-bold text-on-surface-variant">
-                              Order Number
-                            </span>
-                            <p className="font-headline-sm text-headline-sm text-on-surface truncate">#{order.orderNumber}</p>
-                            <p className="text-on-surface-variant text-xs">
-                              Placed on {new Date(order.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
-                            </p>
-                          </div>
-                          
-                          <div className="space-y-1">
-                            <span className="text-[10px] uppercase tracking-wider font-bold text-on-surface-variant">
-                              Fulfillment Status
-                            </span>
-                            <div className="flex items-center mt-1">
-                              <span className="text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider" style={{ backgroundColor: fulfillBg, color: fulfillColor }}>
-                                {fulfillLabel}
-                              </span>
-                            </div>
-                            <p className="text-on-surface-variant text-xs">{itemsCount} {itemsCount === 1 ? "Item" : "Items"}</p>
-                          </div>
-
-                          <div className="space-y-1">
-                            <span className="text-[10px] uppercase tracking-wider font-bold text-on-surface-variant">
-                              Payment &amp; Total
-                            </span>
-                            <div className="flex items-center mt-1">
-                              <span className="text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider" style={{ backgroundColor: payBg, color: payColor }}>
-                                {payLabel}
-                              </span>
-                            </div>
-                            <p className="text-on-surface font-bold mt-1 text-primary" style={{ color: THEME_COLORS.global.primary }}>
-                              ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                          </div>
-
-                          <div className="flex md:justify-end w-full md:w-auto">
-                            <Link
-                              href={`/orders/${order.id}`}
-                              className="px-8 py-3 text-on-primary rounded-full font-label-md text-label-md hover:opacity-90 transition-all active:scale-95 text-center w-full md:w-auto cursor-pointer block font-bold uppercase tracking-wider"
-                              style={{ backgroundColor: THEME_COLORS.global.primary }}
-                            >
-                              View Details
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {orders.map((order) => (
+                    <OrderCard key={order.id} order={order} />
+                  ))}
                 </div>
               )}
             </div>
 
-            {/* Pagination Controls */}
-            {pagination.totalPages > 1 && (
-              <div className="flex items-center justify-center gap-4 mt-12">
-                <button
-                  disabled={!pagination.hasPreviousPage}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="flex items-center justify-center w-10 h-10 rounded-full bg-surface-container-low hover:bg-surface-container border border-outline-variant/10 disabled:opacity-40 transition-all cursor-pointer text-on-surface"
-                >
-                  <span className="material-symbols-outlined text-sm">chevron_left</span>
-                </button>
-                <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">
-                  Page {pagination.page} of {pagination.totalPages}
-                </span>
-                <button
-                  disabled={!pagination.hasNextPage}
-                  onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
-                  className="flex items-center justify-center w-10 h-10 rounded-full bg-surface-container-low hover:bg-surface-container border border-outline-variant/10 disabled:opacity-40 transition-all cursor-pointer text-on-surface"
-                >
-                  <span className="material-symbols-outlined text-sm">chevron_right</span>
-                </button>
-              </div>
-            )}
+            <PaginationControls
+              currentPage={pagination.page}
+              totalPages={pagination.totalPages}
+              hasPreviousPage={pagination.hasPreviousPage}
+              hasNextPage={pagination.hasNextPage}
+              onPrevious={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+            />
           </>
         ) : (
           /* Logged Out / Not Authenticated Prompt */
@@ -408,12 +285,13 @@ export default function OrderHistory() {
                 Please log in to your Eco Caret account to view your past orders and provenance tracking records.
               </p>
             </div>
-            <button
+            <Button
+              unstyled
               onClick={() => dispatch(setProfileOpen(true))}
               className="bg-primary text-white px-8 py-3.5 rounded-full font-label-md text-label-md hover:bg-secondary transition-all duration-300 shadow-md uppercase tracking-wider font-bold cursor-pointer"
             >
               Sign In / Register
-            </button>
+            </Button>
           </div>
         )}
       </main>

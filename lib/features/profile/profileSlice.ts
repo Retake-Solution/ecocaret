@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import type { ProfileGender } from "../../../constants/profile";
 
 export interface ProfileAddress {
   name: string;
@@ -17,11 +18,17 @@ export interface ProfileUser {
   id?: string;
   email: string;
   name?: string;
+  gender?: ProfileGender | null;
+  profileImage?: ProfileImage | null;
   role?: string;
   permissions?: string[];
   isActive?: boolean;
   residentialAddress?: ProfileAddress | null;
   shippingAddresses?: ProfileAddress[];
+}
+
+export interface ProfileImage {
+  url: string;
 }
 
 interface ProfileState {
@@ -56,6 +63,15 @@ export const profileSlice = createSlice({
         }
       }
     },
+    updateProfileUser: (state, action: PayloadAction<ProfileUser>) => {
+      state.user = {
+        ...(state.user || {}),
+        ...action.payload,
+      };
+      if (typeof window !== "undefined") {
+        localStorage.setItem("eco_caret_user", JSON.stringify(state.user));
+      }
+    },
     logoutUser: (state) => {
       state.user = null;
       state.token = null;
@@ -81,6 +97,6 @@ export const profileSlice = createSlice({
   },
 });
 
-export const { setProfileOpen, loginUser, logoutUser, loadProfileState } = profileSlice.actions;
+export const { setProfileOpen, loginUser, updateProfileUser, logoutUser, loadProfileState } = profileSlice.actions;
 
 export default profileSlice.reducer;

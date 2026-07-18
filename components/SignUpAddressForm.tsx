@@ -79,7 +79,6 @@ export default function SignUpAddressForm({
             <label className="font-label-sm text-label-sm text-on-surface-variant">Street Address</label>
             <input
               type="text"
-              required
               value={resLine1}
               onChange={(e) => setResLine1(e.target.value)}
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-3 text-body-md outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
@@ -101,7 +100,6 @@ export default function SignUpAddressForm({
               <label className="font-label-sm text-label-sm text-on-surface-variant">City</label>
               <input
                 type="text"
-                required
                 value={resCity}
                 onChange={(e) => setResCity(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-3 text-body-md outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
@@ -112,7 +110,6 @@ export default function SignUpAddressForm({
               <label className="font-label-sm text-label-sm text-on-surface-variant">State</label>
               <input
                 type="text"
-                required
                 value={resState}
                 onChange={(e) => setResState(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-3 text-body-md outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
@@ -125,7 +122,6 @@ export default function SignUpAddressForm({
               <label className="font-label-sm text-label-sm text-on-surface-variant">Postal Code</label>
               <input
                 type="text"
-                required
                 value={resPostalCode}
                 onChange={(e) => setResPostalCode(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-3 text-body-md outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
@@ -136,7 +132,6 @@ export default function SignUpAddressForm({
               <label className="font-label-sm text-label-sm text-on-surface-variant">Country (2-letter ISO)</label>
               <input
                 type="text"
-                required
                 maxLength={2}
                 value={resCountry}
                 onChange={(e) => setResCountry(e.target.value.toUpperCase())}
@@ -149,7 +144,6 @@ export default function SignUpAddressForm({
             <label className="font-label-sm text-label-sm text-on-surface-variant">Phone</label>
             <input
               type="text"
-              required
               value={resPhone}
               onChange={(e) => setResPhone(e.target.value)}
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-3 text-body-md outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
@@ -183,7 +177,6 @@ export default function SignUpAddressForm({
             <label className="font-label-sm text-label-sm text-on-surface-variant">Recipient Name</label>
             <input
               type="text"
-              required
               value={shipName}
               onChange={(e) => setShipName(e.target.value)}
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-3 text-body-md outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
@@ -194,7 +187,6 @@ export default function SignUpAddressForm({
             <label className="font-label-sm text-label-sm text-on-surface-variant">Street Address</label>
             <input
               type="text"
-              required
               value={shipLine1}
               onChange={(e) => setShipLine1(e.target.value)}
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-3 text-body-md outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
@@ -206,7 +198,6 @@ export default function SignUpAddressForm({
               <label className="font-label-sm text-label-sm text-on-surface-variant">City</label>
               <input
                 type="text"
-                required
                 value={shipCity}
                 onChange={(e) => setShipCity(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-3 text-body-md outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
@@ -217,7 +208,6 @@ export default function SignUpAddressForm({
               <label className="font-label-sm text-label-sm text-on-surface-variant">State</label>
               <input
                 type="text"
-                required
                 value={shipState}
                 onChange={(e) => setShipState(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-3 text-body-md outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
@@ -230,7 +220,6 @@ export default function SignUpAddressForm({
               <label className="font-label-sm text-label-sm text-on-surface-variant">Postal Code</label>
               <input
                 type="text"
-                required
                 value={shipPostalCode}
                 onChange={(e) => setShipPostalCode(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-3 text-body-md outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"
@@ -241,7 +230,6 @@ export default function SignUpAddressForm({
               <label className="font-label-sm text-label-sm text-on-surface-variant">Country (2-letter ISO)</label>
               <input
                 type="text"
-                required
                 maxLength={2}
                 value={shipCountry}
                 onChange={(e) => setShipCountry(e.target.value.toUpperCase())}
@@ -254,7 +242,6 @@ export default function SignUpAddressForm({
             <label className="font-label-sm text-label-sm text-on-surface-variant">Phone</label>
             <input
               type="text"
-              required
               value={shipPhone}
               onChange={(e) => setShipPhone(e.target.value)}
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-3 text-body-md outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all"

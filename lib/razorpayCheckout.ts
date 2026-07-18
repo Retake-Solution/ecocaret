@@ -54,7 +54,7 @@ export type RazorpayCheckoutResult =
 
 export const loadRazorpayCheckout = () => {
   if (typeof window === "undefined") {
-    return Promise.reject(new Error("Razorpay Checkout can only load in the browser."));
+    return Promise.reject(new Error("Checkout can only load in the browser."));
   }
 
   if (window.Razorpay) {
@@ -76,7 +76,7 @@ export const loadRazorpayCheckout = () => {
         "error",
         () => {
           razorpayScriptPromise = null;
-          reject(new Error("Razorpay Checkout failed to load."));
+          reject(new Error("Checkout failed to load."));
         },
         { once: true }
       );
@@ -90,7 +90,7 @@ export const loadRazorpayCheckout = () => {
     script.onerror = () => {
       razorpayScriptPromise = null;
       script.remove();
-      reject(new Error("Razorpay Checkout failed to load."));
+      reject(new Error("Checkout failed to load."));
     };
     document.body.appendChild(script);
   });
@@ -111,7 +111,7 @@ export const openRazorpayCheckout = async (
 
   const Razorpay = window.Razorpay;
   if (!Razorpay) {
-    throw new Error("Razorpay Checkout is unavailable.");
+    throw new Error("Checkout is unavailable.");
   }
 
   return new Promise<RazorpayCheckoutResult>((resolve) => {
