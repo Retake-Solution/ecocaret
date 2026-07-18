@@ -11,7 +11,6 @@ import PaginationControls from "@/components/PaginationControls";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { setCartOpen, removeFromCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
-import { toggleWishlist } from "@/lib/features/wishlist/wishlistSlice";
 import { fetchProductList } from "@/services/api";
 import { COLLECTION_FILTER_OPTIONS, DEFAULT_PRODUCT_FILTERS } from "@/constants/collections";
 import { ApiProduct, ProductFilters } from "@/types";
@@ -72,11 +71,8 @@ function CollectionsList({
   const cartOpen = useAppSelector((state) => state.cart.isOpen);
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const cartItems = useAppSelector((state) => state.cart.items);
-  const wishlistItems = useAppSelector((state) => state.wishlist.items);
 
   const [navScrolled, setNavScrolled] = useState(false);
-
-  const isInWishlist = (id: string) => wishlistItems.includes(id);
 
   const [filters, setFilters] = useState<ProductFilters>(() => ({
     ...DEFAULT_PRODUCT_FILTERS,
@@ -177,8 +173,6 @@ function CollectionsList({
                       key={product._id}
                       product={product}
                       index={index}
-                      isInWishlist={isInWishlist(product._id)}
-                      onToggleWishlist={(productId) => dispatch(toggleWishlist(productId))}
                     />
                   ))}
                 </div>

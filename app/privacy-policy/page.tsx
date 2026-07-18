@@ -35,7 +35,7 @@ const sections = [
   {
     title: "4. Cookies and Similar Technologies",
     body: [
-      "We may use cookies, local storage, analytics tools, and similar technologies to keep you signed in, maintain cart and wishlist experiences, remember preferences, measure performance, and protect against misuse.",
+      "We may use cookies, local storage, analytics tools, and similar technologies to keep you signed in, maintain cart experiences, remember preferences, measure performance, and protect against misuse.",
       "You can manage cookies through your browser settings. Disabling some cookies may affect account access, checkout, cart, payment, or personalization features.",
     ],
   },

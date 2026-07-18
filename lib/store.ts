@@ -2,14 +2,12 @@ import { configureStore } from "@reduxjs/toolkit";
 import { useDispatch, useSelector, useStore } from "react-redux";
 import cartReducer from "./features/cart/cartSlice";
 import profileReducer from "./features/profile/profileSlice";
-import wishlistReducer from "./features/wishlist/wishlistSlice";
 
 export const makeStore = () => {
   return configureStore({
     reducer: {
       cart: cartReducer,
       profile: profileReducer,
-      wishlist: wishlistReducer,
     },
   });
 };

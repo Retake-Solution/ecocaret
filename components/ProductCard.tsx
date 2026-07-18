@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Button from "@/components/Button";
 import {
   PRODUCT_FALLBACK_NAME,
   PRODUCT_FALLBACK_SPEC,
@@ -12,8 +11,6 @@ import { ApiCategory, ApiProduct } from "@/types";
 interface ProductCardProps {
   product: ApiProduct;
   index: number;
-  isInWishlist: boolean;
-  onToggleWishlist: (productId: string) => void;
 }
 
 const formatLabel = (value?: string) =>
@@ -89,8 +86,6 @@ const getAvailableSizeCount = (product: ApiProduct) =>
 export default function ProductCard({
   product,
   index,
-  isInWishlist,
-  onToggleWishlist,
 }: ProductCardProps) {
   const productName = getProductName(product);
   const productImage = getProductImage(product);
@@ -128,19 +123,6 @@ export default function ProductCard({
             </span>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-surface/90 via-surface/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-          <Button
-            unstyled
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onToggleWishlist(product._id);
-            }}
-            className="absolute top-4 right-4 text-primary opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-[-10px] group-hover:translate-y-0 cursor-pointer z-10"
-          >
-            <span className={`material-symbols-outlined ${isInWishlist ? "fill-[1]" : ""}`}>
-              favorite
-            </span>
-          </Button>
         </div>
         <div className="p-4 md:p-6 relative flex-grow flex flex-col justify-between">
           <div>

@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { Provider } from "react-redux";
 import { makeStore } from "@/lib/store";
 import { loadCartState } from "@/lib/features/cart/cartSlice";
-import { loadWishlistState } from "@/lib/features/wishlist/wishlistSlice";
 import { loadProfileState } from "@/lib/features/profile/profileSlice";
 
 export default function StoreProvider({
@@ -16,7 +15,6 @@ export default function StoreProvider({
 
   useEffect(() => {
     store.dispatch(loadCartState());
-    store.dispatch(loadWishlistState());
     store.dispatch(loadProfileState());
   }, [store]);
 
