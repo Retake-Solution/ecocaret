@@ -11,7 +11,7 @@ import CartDrawer from "@/components/CartDrawer";
 import ProfileDialog from "@/components/ProfileDialog";
 import { ApiCategory, ApiProduct } from "@/types";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
-import { setCartOpen, addToCart, removeFromCart, clearCart } from "@/lib/features/cart/cartSlice";
+import { setCartOpen, addToCart, removeFromCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 
 interface ProductDetailsClientProps {
