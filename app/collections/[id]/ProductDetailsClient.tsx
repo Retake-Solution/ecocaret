@@ -522,7 +522,7 @@ export default function ProductDetailsClient({
               </h2>
               <div className="w-16 h-0.5 bg-primary mx-auto"></div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-8">
               {suggestedProducts.map((p) => {
                 const suggestionName = getProductName(p);
                 const suggestionImage = getColorImageUrls(

@@ -1,25 +1,59 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion/react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProfileDialog from "@/components/ProfileDialog";
 import CartDrawer from "@/components/CartDrawer";
 import Hero from "@/components/Hero";
-import AtelierJourney from "@/components/AtelierJourney";
-import ProductShowcase from "@/components/ProductShowcase";
+import Button from "@/components/Button";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
-import { setCartOpen, removeFromCart, clearCart } from "@/lib/features/cart/cartSlice";
+import { setCartOpen, removeFromCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
+import {
+  HOME_COLLECTIONS,
+  HOME_PROCESS_STEPS,
+  HOME_PROMISES,
+} from "@/constants/home";
 
+const revealViewport = { once: true, amount: 0.22 };
 
+const staggerContainer = {
+  hidden: {},
+  visible: {
+    transition: {
+      delayChildren: 0.08,
+      staggerChildren: 0.08,
+    },
+  },
+} satisfies Variants;
 
-import { useRouter } from "next/navigation";
+const fadeUp = {
+  hidden: { opacity: 0, y: 28 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.62, ease: "easeOut" },
+  },
+} satisfies Variants;
+
+const cardReveal = {
+  hidden: { opacity: 0, y: 24, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.5, ease: "easeOut" },
+  },
+} satisfies Variants;
 
 export default function Home() {
   const dispatch = useAppDispatch();
   const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
   const cartOpen = useAppSelector((state) => state.cart.isOpen);
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const cartItems = useAppSelector((state) => state.cart.items);
@@ -28,162 +62,260 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
 
-  // Scroll listener for header
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
+      setScrolled(window.scrollY > 50);
     };
+
     window.addEventListener("scroll", handleScroll);
+
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email) {
-      setSubscribed(true);
-      setTimeout(() => {
-        setSubscribed(false);
-        setEmail("");
-      }, 5000);
-    }
+  const handleSubscribe = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!email.trim()) return;
+
+    setSubscribed(true);
+    window.setTimeout(() => {
+      setSubscribed(false);
+      setEmail("");
+    }, 5000);
   };
 
+  const revealInitial = shouldReduceMotion ? false : "hidden";
+  const hoverLift = shouldReduceMotion ? undefined : { y: -6 };
+  const hoverPress = shouldReduceMotion ? undefined : { scale: 0.98 };
+  const cartItemsCount = cartItems.reduce((acc, curr) => acc + curr.quantity, 0);
+
   return (
-    <div className="bg-background text-on-background font-body-md selection:bg-secondary-container selection:text-on-secondary-container min-h-screen flex flex-col relative overflow-x-hidden">
-      {/* TopNavBar */}
+    <div className="min-h-screen overflow-x-hidden bg-background text-on-background selection:bg-secondary-container selection:text-on-secondary-container">
       <Header
         scrolled={scrolled}
         setCartOpen={(open) => dispatch(setCartOpen(open))}
         setProfileOpen={(open) => dispatch(setProfileOpen(open))}
-        cartItemsCount={cartItems.reduce((acc, curr) => acc + curr.quantity, 0)}
+        cartItemsCount={cartItemsCount}
       />
 
-      <main className="flex-grow">
-        <Hero />
+      <main>
+        <motion.div
+          initial={shouldReduceMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+        >
+          <Hero />
+        </motion.div>
 
-        {/* Collections Category Grid */}
-        <section className="py-16 md:py-24 px-margin-mobile md:px-margin-desktop bg-white">
-          <div className="max-w-container-max mx-auto">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-              {[
-                { name: "Pendants", icon: "workspace_premium", href: "/collections?category=pendants" },
-                { name: "Chains", icon: "link", href: "/collections?category=chains" },
-                { name: "Rings", icon: "diamond", href: "/collections?category=rings" },
-                { name: "Earrings", icon: "flare", href: "/collections?category=earrings" },
-                { name: "Bracelets", icon: "toll", href: "/collections?category=bracelets" },
-                { name: "Necklaces", icon: "auto_awesome", href: "/collections?category=necklaces" },
-              ].map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className="group flex flex-col items-center justify-center p-8 rounded-3xl bg-surface-container-low border border-outline-variant/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:bg-primary/5 hover:border-primary/50 cursor-pointer animate-fade-in"
+        <motion.section
+          className="bg-surface px-margin-mobile pt-28 pb-14 md:px-margin-desktop md:py-20"
+          initial={revealInitial}
+          whileInView="visible"
+          viewport={revealViewport}
+          variants={staggerContainer}
+        >
+          <div className="mx-auto max-w-container-max">
+            <motion.h2
+              className="text-center font-[family:var(--font-playfair-display)] text-3xl font-medium leading-tight text-on-surface md:text-5xl"
+              variants={fadeUp}
+            >
+              Shop The Edit
+            </motion.h2>
+
+            <motion.div
+              className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
+              variants={staggerContainer}
+            >
+              {HOME_COLLECTIONS.map((collection) => (
+                <motion.div
+                  key={collection.name}
+                  variants={cardReveal}
+                  whileHover={hoverLift}
+                  whileTap={hoverPress}
                 >
-                  <div className="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center text-secondary mb-4 transition-all duration-300 group-hover:bg-primary group-hover:text-on-primary group-hover:scale-110">
-                    <span className="material-symbols-outlined text-3xl">
-                      {item.icon}
+                  <Link
+                    href={collection.href}
+                    className="group flex min-h-36 flex-col items-center justify-center gap-4 rounded-lg border border-outline-variant/30 bg-surface-container-lowest p-5 text-center shadow-sm transition-colors duration-300 hover:border-primary/50 hover:bg-primary/5 hover:shadow-md"
+                  >
+                    <span className="material-symbols-outlined text-4xl text-primary transition-transform duration-300 group-hover:scale-110" aria-hidden="true">
+                      {collection.icon}
                     </span>
-                  </div>
-                  <span className="font-label-md text-label-md text-on-surface font-semibold tracking-wider text-center transition-colors group-hover:text-primary">
-                    {item.name}
-                  </span>
-                </Link>
+                    <h3 className="font-headline-sm text-xl text-on-surface transition-colors group-hover:text-primary">
+                      {collection.name}
+                    </h3>
+                  </Link>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
-        </section>
+        </motion.section>
 
-        <AtelierJourney />
+        <motion.section
+          className="relative overflow-hidden bg-inverse-surface px-margin-mobile py-16 text-inverse-on-surface md:px-margin-desktop md:py-24"
+          initial={revealInitial}
+          whileInView="visible"
+          viewport={revealViewport}
+          variants={staggerContainer}
+        >
+          <div className="absolute left-0 top-0 h-full w-1/2 bg-primary/10 blur-3xl" aria-hidden="true" />
+          <div className="relative mx-auto max-w-container-max">
+            <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+              <motion.div className="space-y-4" variants={fadeUp}>
+                <p className="font-label-sm text-[11px] font-bold uppercase tracking-widest text-inverse-primary">
+                  From Source To Setting
+                </p>
+                <h2 className="font-[family:var(--font-playfair-display)] text-3xl font-medium leading-tight text-white md:text-5xl">
+                  A buying journey that explains itself as it moves.
+                </h2>
+              </motion.div>
+              <motion.p
+                className="font-body-md text-body-md leading-relaxed text-inverse-on-surface/76"
+                variants={fadeUp}
+              >
+                Customers should not need to decode conscious jewelry. The page now
+                stages the material story as a compact timeline, with each step arriving
+                in sequence as the section enters view.
+              </motion.p>
+            </div>
 
-        {/* Product Showcase: Asymmetric Layout */}
-        <ProductShowcase />
-
-        {/* Values Section: Glassmorphism Triptych */}
-        <section className="py-16 md:py-24 bg-surface-container relative">
-          <div className="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="glass-effect p-12 rounded-[40px] border border-white/50 text-center space-y-6 shadow-sm hover:shadow-md transition-shadow duration-300">
-              <span className="material-symbols-outlined text-secondary text-5xl">
-                nature
-              </span>
-              <h3 className="font-headline-sm text-headline-sm text-on-surface">
-                Zero Impact
-              </h3>
-              <p className="font-body-md text-body-md text-on-surface-variant">
-                We don&apos;t just reduce damage; we actively restore ecosystems with
-                every purchase.
-              </p>
-            </div>
-            <div className="glass-effect p-12 rounded-[40px] border border-white/50 text-center space-y-6 md:-translate-y-12 shadow-md hover:-translate-y-14 transition-all duration-300">
-              <span className="material-symbols-outlined text-secondary text-5xl">
-                auto_awesome
-              </span>
-              <h3 className="font-headline-sm text-headline-sm text-on-surface">
-                Conflict-Free
-              </h3>
-              <p className="font-body-md text-body-md text-on-surface-variant">
-                A transparent supply chain that empowers local communities and
-                ensures fair labor.
-              </p>
-            </div>
-            <div className="glass-effect p-12 rounded-[40px] border border-white/50 text-center space-y-6 shadow-sm hover:shadow-md transition-shadow duration-300">
-              <span className="material-symbols-outlined text-secondary text-5xl">
-                all_inclusive
-              </span>
-              <h3 className="font-headline-sm text-headline-sm text-on-surface">
-                Heirloom Quality
-              </h3>
-              <p className="font-body-md text-body-md text-on-surface-variant">
-                Crafted to outlast trends, becoming a legacy piece for
-                generations to come.
-              </p>
-            </div>
+            <motion.div className="mt-12 grid grid-cols-2 gap-4 md:grid-cols-4" variants={staggerContainer}>
+              {HOME_PROCESS_STEPS.map((item) => (
+                <motion.div
+                  key={item.step}
+                  className="relative overflow-hidden rounded-lg border border-inverse-on-surface/16 bg-white/[0.04] p-5 backdrop-blur-sm"
+                  variants={cardReveal}
+                  whileHover={shouldReduceMotion ? undefined : { y: -4, backgroundColor: "rgba(255,255,255,0.08)" }}
+                >
+                  <span className="absolute -right-3 -top-4 font-[family:var(--font-playfair-display)] text-7xl text-white/5" aria-hidden="true">
+                    {item.step}
+                  </span>
+                  <p className="font-label-sm text-[11px] font-bold uppercase tracking-widest text-inverse-primary">
+                    Step {item.step}
+                  </p>
+                  <h3 className="mt-5 font-headline-sm text-2xl text-white">
+                    {item.title}
+                  </h3>
+                  <p className="mt-3 font-body-md text-sm leading-relaxed text-inverse-on-surface/72">
+                    {item.description}
+                  </p>
+                </motion.div>
+              ))}
+            </motion.div>
           </div>
-        </section>
+        </motion.section>
 
-        {/* Newsletter / Community */}
-        <section className="py-16 md:py-24 px-margin-mobile md:px-margin-desktop bg-surface">
-          <div className="max-w-3xl mx-auto text-center space-y-6 md:space-y-8 relative">
-            <h2 className="font-headline-md text-headline-md text-on-surface">
-              Join the Conscious EcoCaret
-            </h2>
-            <p className="font-body-lg text-body-lg text-on-surface-variant">
-              Be the first to explore limited drops and receive insights into the
-              future of ethical luxury.
-            </p>
-            <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-4 mt-8">
+        <motion.section
+          className="bg-surface-container px-margin-mobile py-16 md:px-margin-desktop md:py-24"
+          initial={revealInitial}
+          whileInView="visible"
+          viewport={revealViewport}
+          variants={staggerContainer}
+        >
+          <div className="mx-auto max-w-container-max">
+            <motion.div className="mb-10 max-w-2xl space-y-3" variants={fadeUp}>
+              <p className="font-label-sm text-[11px] font-bold uppercase tracking-widest text-primary">
+                Eco Caret Promise
+              </p>
+              <h2 className="font-[family:var(--font-playfair-display)] text-3xl font-medium leading-tight text-on-surface md:text-5xl">
+                Beauty with standards you can explain.
+              </h2>
+            </motion.div>
+
+            <motion.div className="grid gap-4 md:grid-cols-3" variants={staggerContainer}>
+              {HOME_PROMISES.map((item) => (
+                <motion.div
+                  key={item.title}
+                  className="rounded-lg border border-outline-variant/30 bg-surface-container-lowest p-6 shadow-sm"
+                  variants={cardReveal}
+                  whileHover={hoverLift}
+                >
+                  <motion.span
+                    className="material-symbols-outlined text-3xl text-primary"
+                    aria-hidden="true"
+                    whileHover={shouldReduceMotion ? undefined : { rotate: 8, scale: 1.08 }}
+                  >
+                    {item.icon}
+                  </motion.span>
+                  <h3 className="mt-6 font-headline-sm text-2xl text-on-surface">
+                    {item.title}
+                  </h3>
+                  <p className="mt-3 font-body-md text-body-md leading-relaxed text-on-surface-variant">
+                    {item.description}
+                  </p>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        </motion.section>
+
+        <motion.section
+          className="bg-primary px-margin-mobile py-14 text-on-primary md:px-margin-desktop md:py-20"
+          initial={revealInitial}
+          whileInView="visible"
+          viewport={revealViewport}
+          variants={staggerContainer}
+        >
+          <div className="mx-auto grid max-w-container-max gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+            <motion.div className="space-y-4" variants={fadeUp}>
+              <p className="font-label-sm text-[11px] font-bold uppercase tracking-widest text-on-primary/75">
+                Conscious Notes
+              </p>
+              <h2 className="font-[family:var(--font-playfair-display)] text-3xl font-medium leading-tight md:text-5xl">
+                Limited drops, care notes, and material stories.
+              </h2>
+              <p className="font-body-md text-body-md leading-relaxed text-on-primary/78">
+                Join the Eco Caret list for new collections and thoughtful guidance,
+                without noisy inbox clutter.
+              </p>
+            </motion.div>
+
+            <motion.form
+              onSubmit={handleSubscribe}
+              className="rounded-lg border border-white/25 bg-white/10 p-3 backdrop-blur-md sm:flex sm:items-center sm:gap-3"
+              variants={fadeUp}
+            >
+              <label className="sr-only" htmlFor="home-newsletter-email">
+                Email address
+              </label>
               <input
-                className="flex-grow bg-surface-container-low border-b-2 border-outline-variant focus:border-secondary focus:ring-0 px-6 py-4 rounded-t-xl font-body-md outline-none transition-all placeholder:text-on-surface-variant/40"
+                id="home-newsletter-email"
+                className="w-full rounded-lg border border-white/25 bg-white px-4 py-3 font-body-md text-body-md text-on-surface outline-none transition-all placeholder:text-on-surface-variant/50 focus:border-white focus:ring-4 focus:ring-white/20 sm:flex-1"
                 placeholder="Email address"
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
               />
-              <button
-                type="submit"
-                className="bg-primary text-on-primary px-12 py-4 rounded-full font-label-md text-label-md hover:shadow-xl hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
-              >
-                Subscribe
-              </button>
-            </form>
+              <motion.div whileTap={hoverPress} className="mt-3 sm:mt-0">
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  className="w-full bg-on-primary text-primary hover:bg-surface sm:w-auto"
+                  rightIcon="arrow_forward"
+                >
+                  Subscribe
+                </Button>
+              </motion.div>
+            </motion.form>
 
-            {/* Subscribed Toast Success Alert */}
-            {subscribed && (
-              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-4 bg-secondary text-white px-6 py-3 rounded-full text-label-md font-medium shadow-md transition-opacity animate-bounce">
-                Thank you for joining the Conscious EcoCaret! Check your inbox.
-              </div>
-            )}
+            <AnimatePresence>
+              {subscribed && (
+                <motion.div
+                  className="rounded-full bg-on-primary px-5 py-3 text-center font-label-sm text-[12px] font-bold uppercase tracking-wider text-primary shadow-md lg:col-start-2"
+                  initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
+                  transition={{ duration: 0.24, ease: "easeOut" }}
+                >
+                  Thank you for joining Eco Caret. Check your inbox.
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        </section>
+        </motion.section>
       </main>
 
-      {/* Footer */}
       <Footer />
 
-      {/* --- PREMIUM INTERACTIVE DRAWER: SHOPPING CART --- */}
       <CartDrawer
         isOpen={cartOpen}
         onClose={() => dispatch(setCartOpen(false))}
@@ -195,7 +327,6 @@ export default function Home() {
         }}
       />
 
-      {/* --- PREMIUM INTERACTIVE DIALOG: USER PROFILE --- */}
       <ProfileDialog isOpen={profileOpen} onClose={() => dispatch(setProfileOpen(false))} />
     </div>
   );
