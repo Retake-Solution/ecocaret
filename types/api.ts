@@ -37,6 +37,35 @@ export interface LoginResult {
 export type { ProfileEditValues };
 export type Gender = ProfileGender;
 
+export type CurrencyCode = string;
+
+export interface PublicCurrency {
+  code: CurrencyCode;
+  name: string;
+  symbol: string;
+  narrowSymbol?: string;
+  exponent: number;
+  isDefault: boolean;
+  displayOrder: number;
+}
+
+export interface CurrencyListResponse {
+  success: boolean;
+  data: PublicCurrency[];
+  defaultCurrency: CurrencyCode;
+}
+
+export interface CurrencyResponse {
+  success: boolean;
+  data: PublicCurrency;
+}
+
+export interface Money {
+  amountMinor: number;
+  currency: CurrencyCode;
+  exponent: number;
+}
+
 export interface ProductFilters {
   category?: string;
   subCategory?: string;

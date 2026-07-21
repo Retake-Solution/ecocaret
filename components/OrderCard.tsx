@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { THEME_COLORS } from "@/theme/colors";
+import { formatServerMoney } from "@/lib/money";
 import { OrderData } from "@/types";
 
 interface OrderCardProps {
@@ -59,7 +60,10 @@ const getPaymentBadgeDetails = (status: string) => {
 export default function OrderCard({ order }: OrderCardProps) {
   const firstItem = order.items[0];
   const imageSrc = firstItem?.productSnapshot?.imageUrl;
-  const totalAmount = order.totals.totalMinor / 100;
+  const totalAmount = formatServerMoney(order.totals.totalMinor, order.totals.currency, [], {
+    currencyDisplay: "code",
+    fallbackExponent: 2,
+  });
   const { label: fulfillLabel, color: fulfillColor, bgColor: fulfillBg } =
     getFulfillmentBadgeDetails(order.fulfillmentStatus);
   const { label: payLabel, color: payColor, bgColor: payBg } =
@@ -108,7 +112,7 @@ export default function OrderCard({ order }: OrderCardProps) {
             </span>
           </div>
           <p className="text-on-surface font-bold mt-1 text-primary" style={{ color: THEME_COLORS.global.primary }}>
-            ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {totalAmount}
           </p>
         </div>
 

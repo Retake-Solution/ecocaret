@@ -25,6 +25,8 @@ import {
   CreatePaymentPayload,
   CustomerPaymentListResult,
   CustomerPaymentResult,
+  CurrencyListResponse,
+  CurrencyResponse,
   VerifyRazorpayPayload,
 } from "@/types";
 import { buildProfileUpdateBody, type ProfileEditValues } from "@/lib/profileEdit";
@@ -77,6 +79,36 @@ const toQueryParams = (filters?: ProductFilters) => {
   return Object.fromEntries(
     Object.entries(filters).filter(([, value]) => value !== "" && value !== undefined)
   );
+};
+
+export const listCurrencies = async (): Promise<CurrencyListResponse> => {
+  try {
+    const response = await apiClient.get<CurrencyListResponse>("/api/v1/currencies");
+    const json = response.data;
+
+    if (!json?.success || !Array.isArray(json.data)) {
+      throw new Error("Unable to load currencies.");
+    }
+
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to load currencies.");
+  }
+};
+
+export const getCurrency = async (code: string): Promise<CurrencyResponse["data"]> => {
+  try {
+    const response = await apiClient.get<CurrencyResponse>(`/api/v1/currencies/${code}`);
+    const json = response.data;
+
+    if (!json?.success || !json.data) {
+      throw new Error("Unable to load selected currency.");
+    }
+
+    return json.data;
+  } catch (error) {
+    throw getApiError(error, "Unable to load selected currency.");
+  }
 };
 
 export const login = async ({ email, password }: LoginCredentials): Promise<LoginResult> => {

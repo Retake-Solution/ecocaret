@@ -12,6 +12,7 @@ import Button from "@/components/Button";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { setCartOpen, removeFromCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
+import { formatServerMoney } from "@/lib/money";
 import { THEME_COLORS } from "@/theme/colors";
 import axios from "axios";
 import {
@@ -84,12 +85,10 @@ const getShipmentStatusDetails = (status: string) => {
 };
 
 const formatCurrencyMinor = (amountMinor: number, currency: string) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency || "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amountMinor / 100);
+  formatServerMoney(amountMinor, currency || "USD", [], {
+    currencyDisplay: "code",
+    fallbackExponent: 2,
+  });
 
 const formatDateTime = (value?: string) => {
   if (!value) return "Not updated yet";

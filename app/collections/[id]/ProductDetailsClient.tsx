@@ -10,9 +10,11 @@ import ProductVisuals from "@/components/ProductVisuals";
 import CartDrawer from "@/components/CartDrawer";
 import ProfileDialog from "@/components/ProfileDialog";
 import { ApiCategory, ApiProduct } from "@/types";
+import { formatLegacyUsdMajor, formatMoney } from "@/lib/money";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { setCartOpen, addToCart, removeFromCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
+import { fetchProductById } from "@/services/api";
 
 interface ProductDetailsClientProps {
   product: ApiProduct;
@@ -132,8 +134,21 @@ const getMetalHex = (color: string) => {
 
 const getPrimaryStone = (product: ApiProduct) => product.productStones?.[0]?.stone;
 
+const getProductPricingVariant = (
+  product: ApiProduct,
+  purity: string,
+  metalColor: string,
+  size: string
+) =>
+  product.pricing?.variants?.find(
+    (variant) =>
+      variant.purity === purity &&
+      variant.metalColor === metalColor &&
+      variant.size === size
+  );
+
 export default function ProductDetailsClient({
-  product,
+  product: initialProduct,
   suggestedProducts,
 }: ProductDetailsClientProps) {
   const dispatch = useAppDispatch();
@@ -141,6 +156,10 @@ export default function ProductDetailsClient({
   const cartOpen = useAppSelector((state) => state.cart.isOpen);
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const cartItems = useAppSelector((state) => state.cart.items);
+  const currencyInitialized = useAppSelector((state) => state.currency.initialized);
+  const selectedCurrencyCode = useAppSelector((state) => state.currency.selectedCode);
+
+  const [product, setProduct] = useState(initialProduct);
 
   const productName = getProductName(product);
   const initialPurity = getInitialPurity(product);
@@ -166,6 +185,24 @@ export default function ProductDetailsClient({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    if (!currencyInitialized) return;
+    let isMounted = true;
+
+    const refreshProduct = async () => {
+      const latestProduct = await fetchProductById(initialProduct._id);
+      if (isMounted && latestProduct) {
+        setProduct(latestProduct);
+      }
+    };
+
+    refreshProduct();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currencyInitialized, initialProduct._id, selectedCurrencyCode]);
+
   const availableOptions = getAvailableMetalOptions(product);
   const uniquePurities = Array.from(new Set(availableOptions.map((option) => option.purity)));
   const metalsForPurity = availableOptions.filter((option) => option.purity === selectedPurity);
@@ -184,6 +221,12 @@ export default function ProductDetailsClient({
     selectedPurity,
     selectedMetalColor
   );
+  const currentPriceMoney =
+    getProductPricingVariant(product, selectedPurity, selectedMetalColor, selectedSize)?.price ||
+    product.pricing?.estimated;
+  const currentPriceLabel = currentPriceMoney
+    ? formatMoney(currentPriceMoney)
+    : formatLegacyUsdMajor(currentPrice);
   const primaryStoneWeight = product.totalStoneCaratWeight || primaryStone?.caratWeight || 0;
   const specificationItems = [
     {
@@ -216,6 +259,7 @@ export default function ProductDetailsClient({
         id: `${product._id}-${selectedPurity}-${selectedMetalColor}-${selectedSize}`,
         name: `${productName} (${selectedMetalLabel} / Size ${selectedSize})`,
         price: currentPrice,
+        priceMoney: currentPriceMoney,
         image: selectedImage,
       })
     );
@@ -277,7 +321,7 @@ export default function ProductDetailsClient({
                 {product.shortDescription || formatLabel(product.stoneType)}
               </p>
               <p className="font-body-lg text-body-lg text-secondary mb-8 font-medium">
-                ${currentPrice}
+                {currentPriceLabel}
               </p>
 
               {uniquePurities.length > 0 && (
@@ -530,6 +574,9 @@ export default function ProductDetailsClient({
                   getInitialMetalColor(p, getInitialPurity(p))
                 )[0];
                 const price = getProductPrice(p);
+                const priceLabel = p.pricing?.estimated
+                  ? formatMoney(p.pricing.estimated)
+                  : formatLegacyUsdMajor(price);
 
                 return (
                   <Link
@@ -563,7 +610,7 @@ export default function ProductDetailsClient({
                         {formatLabel(p.stoneType)} - {getTaxonomyLabel(p.subCategory) || getTaxonomyLabel(p.category)}
                       </p>
                       <p className="font-label-md text-secondary font-bold mt-2">
-                        ${price.toLocaleString()}
+                        {priceLabel}
                       </p>
                     </div>
                   </Link>

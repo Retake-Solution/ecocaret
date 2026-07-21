@@ -71,6 +71,8 @@ function CollectionsList({
   const cartOpen = useAppSelector((state) => state.cart.isOpen);
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const cartItems = useAppSelector((state) => state.cart.items);
+  const currencyInitialized = useAppSelector((state) => state.currency.initialized);
+  const selectedCurrencyCode = useAppSelector((state) => state.currency.selectedCode);
 
   const [navScrolled, setNavScrolled] = useState(false);
 
@@ -105,6 +107,7 @@ function CollectionsList({
   };
 
   useEffect(() => {
+    if (!currencyInitialized) return;
     let isMounted = true;
 
     const loadProducts = async () => {
@@ -121,7 +124,7 @@ function CollectionsList({
     return () => {
       isMounted = false;
     };
-  }, [filters]);
+  }, [currencyInitialized, filters, selectedCurrencyCode]);
 
   const currentPage = filters.page || 1;
   const pageSize = filters.limit || 20;

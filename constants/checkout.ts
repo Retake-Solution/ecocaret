@@ -25,4 +25,5 @@ export const CHECKOUT_COUNTRY_OPTIONS = [
   "United States",
   "France",
   "Germany",
+  "India",
 ];

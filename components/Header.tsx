@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import CurrencySelector from "@/components/CurrencySelector";
 import { useAppSelector } from "@/lib/store";
 import { getProfileAvatarDisplay } from "@/lib/profileEdit";
 import { THEME_COLORS } from "@/theme/colors";
@@ -67,6 +68,13 @@ export default function Header({
 
           {/* Body */}
           <div className="flex-grow overflow-y-auto px-6 py-6 space-y-6">
+            <div className="space-y-3">
+              <span className="text-[10px] font-bold tracking-widest text-on-surface-variant/40 uppercase">
+                Currency
+              </span>
+              <CurrencySelector className="w-full" />
+            </div>
+
             {/* Category Accordions */}
             <div className="space-y-4">
               <span className="text-[10px] font-bold tracking-widest text-on-surface-variant/40 uppercase">
@@ -391,6 +399,7 @@ export default function Header({
       </div>
 
       <div className="flex items-center gap-4 md:gap-6" style={{ color: THEME_COLORS.global.primary }}>
+        <CurrencySelector compact className="hidden md:inline-flex" />
         <button
           className="md:hidden hover:bg-primary/10 transition-all duration-300 p-2 rounded-full cursor-pointer flex items-center justify-center"
           onClick={() => setMobileMenuOpen(true)}
