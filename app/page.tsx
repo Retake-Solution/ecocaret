@@ -8,10 +8,12 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProfileDialog from "@/components/ProfileDialog";
 import CartDrawer from "@/components/CartDrawer";
+import CurrencySelectionModal from "@/components/CurrencySelectionModal";
 import Hero from "@/components/Hero";
 import Button from "@/components/Button";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { setCartOpen, removeFromCart } from "@/lib/features/cart/cartSlice";
+import { selectCurrency } from "@/lib/features/currency/currencySlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import {
   HOME_COLLECTIONS,
@@ -57,10 +59,13 @@ export default function Home() {
   const cartOpen = useAppSelector((state) => state.cart.isOpen);
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const cartItems = useAppSelector((state) => state.cart.items);
+  const currencies = useAppSelector((state) => state.currency.currencies);
+  const selectedCurrencyCode = useAppSelector((state) => state.currency.selectedCode);
 
   const [scrolled, setScrolled] = useState(false);
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -83,6 +88,11 @@ export default function Home() {
     }, 5000);
   };
 
+  const handleCurrencySelect = (code: string) => {
+    dispatch(selectCurrency(code));
+    setCurrencyModalOpen(false);
+  };
+
   const revealInitial = shouldReduceMotion ? false : "hidden";
   const hoverLift = shouldReduceMotion ? undefined : { y: -6 };
   const hoverPress = shouldReduceMotion ? undefined : { scale: 0.98 };
@@ -95,6 +105,7 @@ export default function Home() {
         setCartOpen={(open) => dispatch(setCartOpen(open))}
         setProfileOpen={(open) => dispatch(setProfileOpen(open))}
         cartItemsCount={cartItemsCount}
+        onCurrencySelectOpen={() => setCurrencyModalOpen(true)}
       />
 
       <main>
@@ -328,6 +339,15 @@ export default function Home() {
       />
 
       <ProfileDialog isOpen={profileOpen} onClose={() => dispatch(setProfileOpen(false))} />
+
+      <CurrencySelectionModal
+        currencies={currencies}
+        isOpen={currencyModalOpen}
+        onClose={() => setCurrencyModalOpen(false)}
+        onSelect={handleCurrencySelect}
+        selectedCode={selectedCurrencyCode}
+        showCurrentSelection
+      />
     </div>
   );
 }

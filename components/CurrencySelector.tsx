@@ -1,6 +1,7 @@
 "use client";
 
-import { ChangeEvent } from "react";
+import { useState } from "react";
+import CurrencySelectionModal from "@/components/CurrencySelectionModal";
 import { selectCurrency } from "@/lib/features/currency/currencySlice";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
 
@@ -8,14 +9,17 @@ interface CurrencySelectorProps {
   compact?: boolean;
   className?: string;
   label?: string;
+  onOpenModal?: () => void;
 }
 
 export default function CurrencySelector({
   compact = false,
   className = "",
   label,
+  onOpenModal,
 }: CurrencySelectorProps) {
   const dispatch = useAppDispatch();
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const {
     currencies,
     selectedCode,
@@ -24,8 +28,13 @@ export default function CurrencySelector({
     error,
   } = useAppSelector((state) => state.currency);
 
-  const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    dispatch(selectCurrency(event.target.value));
+  const selectedCurrency =
+    currencies.find((currency) => currency.code === selectedCode) || currencies[0];
+  const widthClass = compact ? "min-w-[132px]" : "w-full";
+
+  const handleSelectCurrency = (code: string) => {
+    dispatch(selectCurrency(code));
+    setIsModalOpen(false);
   };
 
   if (!initialized && loading) {
@@ -74,54 +83,55 @@ export default function CurrencySelector({
     );
   }
 
-  const selectedCurrency =
-    currencies.find((currency) => currency.code === selectedCode) || currencies[0];
-  const widthClass = compact ? "min-w-[132px]" : "w-full";
-
   return (
-    <label
-      className={`group relative inline-flex h-11 items-center rounded-lg border border-outline-variant/35 bg-surface-container-lowest shadow-sm transition-all duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15 hover:border-primary/45 hover:bg-primary/5 ${widthClass} ${className}`}
-      title={
-        selectedCurrency
-          ? `${selectedCurrency.name} (${selectedCurrency.symbol})`
-          : "Select display currency"
-      }
-    >
-      <span className="sr-only">Select display currency</span>
-      <span
-        className="ml-2.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[12px] font-bold text-primary transition-colors group-hover:bg-primary group-hover:text-on-primary"
-        aria-hidden="true"
-      >
-        {selectedCurrency?.symbol || "$"}
-      </span>
-      <span className="pointer-events-none absolute left-12 flex flex-col leading-none">
-        {label && (
-          <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant/60">
-            {label}
-          </span>
-        )}
-        <span className="text-[11px] font-bold tracking-wide text-on-surface">
-          {selectedCurrency?.code || selectedCode || "USD"}
-        </span>
-      </span>
-      <select
-        aria-label="Select display currency"
-        value={selectedCode || ""}
-        onChange={handleChange}
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          if (onOpenModal) {
+            onOpenModal();
+            return;
+          }
+          setIsModalOpen(true);
+        }}
         disabled={loading}
-        className="relative z-10 h-full w-full cursor-pointer appearance-none rounded-lg bg-transparent py-0 pl-12 pr-9 text-[11px] font-bold text-transparent outline-none disabled:cursor-wait disabled:opacity-60"
+        className={`group relative inline-flex h-11 items-center rounded-lg border border-outline-variant/35 bg-surface-container-lowest shadow-sm transition-all duration-200 hover:border-primary/45 hover:bg-primary/5 focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 disabled:cursor-wait disabled:opacity-60 ${widthClass} ${className}`}
+        title={
+          selectedCurrency
+            ? `${selectedCurrency.name} (${selectedCurrency.symbol})`
+            : "Select display currency"
+        }
+        aria-haspopup="dialog"
+        aria-expanded={isModalOpen}
       >
-        {currencies.map((currency) => (
-          <option key={currency.code} value={currency.code}>
-            {compact
-              ? `${currency.symbol} ${currency.code}`
-              : `${currency.symbol} ${currency.code} - ${currency.name}`}
-          </option>
-        ))}
-      </select>
-      <span className="material-symbols-outlined pointer-events-none absolute right-2.5 z-20 text-base text-on-surface-variant transition-colors group-hover:text-primary">
-        expand_more
-      </span>
-    </label>
+        <span
+          className="ml-2.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[12px] font-bold text-primary transition-colors group-hover:bg-primary group-hover:text-on-primary"
+          aria-hidden="true"
+        >
+          {selectedCurrency?.symbol || "$"}
+        </span>
+        <span className="flex flex-col items-start leading-none">
+          {label && (
+            <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant/60">
+              {label}
+            </span>
+          )}
+          <span className="text-[11px] font-bold tracking-wide text-on-surface">
+            {selectedCurrency?.code || selectedCode || "USD"}
+          </span>
+        </span>
+        <span className="material-symbols-outlined pointer-events-none absolute right-2.5 text-base text-on-surface-variant transition-colors group-hover:text-primary">
+          expand_more
+        </span>
+      </button>
+
+      <CurrencySelectionModal
+        currencies={currencies}
+        isOpen={!onOpenModal && isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSelect={handleSelectCurrency}
+        selectedCode={selectedCode}
+      />
+    </>
   );
 }

@@ -42,6 +42,7 @@ interface HeaderProps {
   setCartOpen: (open: boolean) => void;
   setProfileOpen: (open: boolean) => void;
   cartItemsCount: number;
+  onCurrencySelectOpen?: () => void;
 }
 
 export default function Header({
@@ -49,6 +50,7 @@ export default function Header({
   setCartOpen,
   setProfileOpen,
   cartItemsCount,
+  onCurrencySelectOpen,
 }: HeaderProps) {
   const hasHydrated = useHasHydrated();
   const storedUser = useAppSelector((state) => state.profile.user);
@@ -56,6 +58,11 @@ export default function Header({
   const safeCartItemsCount = hasHydrated ? cartItemsCount : 0;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const avatar = getProfileAvatarDisplay(user);
+
+  const handleCurrencySelectOpen = () => {
+    setMobileMenuOpen(false);
+    onCurrencySelectOpen?.();
+  };
 
   const renderCurrencySlot = (compact = false, className = "") => {
     if (!hasHydrated) {
@@ -77,7 +84,14 @@ export default function Header({
       );
     }
 
-    return <CurrencySelector compact={compact} className={className} label="Currency" />;
+    return (
+      <CurrencySelector
+        compact={compact}
+        className={className}
+        label="Currency"
+        onOpenModal={onCurrencySelectOpen ? handleCurrencySelectOpen : undefined}
+      />
+    );
   };
 
   const renderMobileMenu = () => {
@@ -109,13 +123,6 @@ export default function Header({
 
           {/* Body */}
           <div className="flex-grow overflow-y-auto px-6 py-6 space-y-6">
-            <div className="space-y-3">
-              <span className="text-[10px] font-bold tracking-widest text-on-surface-variant/40 uppercase">
-                Currency
-              </span>
-              {renderCurrencySlot(false, "w-full")}
-            </div>
-
             {/* Category Accordions */}
             <div className="space-y-4">
               <span className="text-[10px] font-bold tracking-widest text-on-surface-variant/40 uppercase">
@@ -225,13 +232,7 @@ export default function Header({
 
           {/* Footer CTA */}
           <div className="p-6 border-t border-outline-variant/10 bg-surface-container-lowest flex flex-col gap-4">
-            <Link 
-              href="/collections?consultation=true" 
-              onClick={() => setMobileMenuOpen(false)} 
-              className="bg-primary text-on-primary py-4 rounded-full font-label-md text-label-md hover:bg-primary-container transition-all text-center font-bold tracking-wider shadow-md w-full"
-            >
-              Book Consultation
-            </Link>
+            {renderCurrencySlot(false, "w-full")}
             <div className="text-center text-[10px] text-on-surface-variant/60 font-medium">
               Eco Caret Atelier · London & Antwerp
             </div>
@@ -440,7 +441,9 @@ export default function Header({
       </div>
 
       <div className="flex items-center gap-4 md:gap-6" style={{ color: THEME_COLORS.global.primary }}>
-        {renderCurrencySlot(true, "hidden md:inline-flex")}
+        <div className="hidden md:block">
+          {renderCurrencySlot(true)}
+        </div>
         <button
           className="md:hidden hover:bg-primary/10 transition-all duration-300 p-2 rounded-full cursor-pointer flex items-center justify-center"
           onClick={() => setMobileMenuOpen(true)}
