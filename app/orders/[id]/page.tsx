@@ -84,10 +84,15 @@ const getShipmentStatusDetails = (status: string) => {
   }
 };
 
-const formatCurrencyMinor = (amountMinor: number, currency: string) =>
+const isSafeCurrencyCode = (currency: string) => /^[A-Z]{3}$/.test(currency);
+
+const isSafeCurrencyExponent = (exponent: unknown) =>
+  Number.isSafeInteger(exponent) && Number(exponent) >= 0 && Number(exponent) <= 6;
+
+const formatCurrencyMinor = (amountMinor: number, currency: string, exponent?: number) =>
   formatServerMoney(amountMinor, currency || "USD", [], {
     currencyDisplay: "code",
-    fallbackExponent: 2,
+    fallbackExponent: exponent ?? 2,
   });
 
 const formatDateTime = (value?: string) => {
@@ -154,6 +159,7 @@ export default function OrderDetailPage({ params }: PageProps) {
   const cartOpen = useAppSelector((state) => state.cart.isOpen);
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const cartItems = useAppSelector((state) => state.cart.items);
+  const selectedCurrencyCode = useAppSelector((state) => state.currency.selectedCode);
 
   const [scrolled, setScrolled] = useState(false);
   const [liveOrder, setLiveOrder] = useState<OrderData | null>(null);
@@ -554,7 +560,7 @@ export default function OrderDetailPage({ params }: PageProps) {
   const orderDetails = {
     number: `#${liveOrder.orderNumber}`,
     name: liveOrder.items[0]?.productSnapshot?.name,
-    price: formatCurrencyMinor(liveOrder.totals.totalMinor, liveOrder.totals.currency),
+    price: formatCurrencyMinor(liveOrder.totals.totalMinor, liveOrder.totals.currency, liveOrder.totals.exponent),
     date: new Date(liveOrder.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
     deliveryDate: new Date(new Date(liveOrder.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     specs: `Metal: ${liveOrder.items[0]?.variantSnapshot?.metalType} • Purity: ${liveOrder.items[0]?.variantSnapshot?.purity} • Color: ${liveOrder.items[0]?.variantSnapshot?.metalColor} • Size: ${liveOrder.items[0]?.variantSnapshot?.sizeLabel || liveOrder.items[0]?.variantSnapshot?.size}`,
@@ -743,7 +749,15 @@ export default function OrderDetailPage({ params }: PageProps) {
     const paymentState = paymentFlow.payment?.status || normPayment;
     const paymentLabel = PAYMENT_STATUS_LABELS[paymentState] || paymentState.replace(/_/g, " ");
     const paymentLastUpdated = paymentFlow.payment?.updatedAt || liveOrder.updatedAt;
-    const amountDueLabel = formatCurrencyMinor(liveOrder.totals.amountDueMinor, liveOrder.totals.currency);
+    const paymentCurrencyValid = isSafeCurrencyCode(liveOrder.totals.currency);
+    const paymentExponentValid =
+      liveOrder.totals.exponent === undefined || isSafeCurrencyExponent(liveOrder.totals.exponent);
+    const amountDueValid = Number.isSafeInteger(liveOrder.totals.amountDueMinor) && liveOrder.totals.amountDueMinor >= 0;
+    const amountDueLabel = formatCurrencyMinor(
+      liveOrder.totals.amountDueMinor,
+      liveOrder.totals.currency,
+      liveOrder.totals.exponent
+    );
     const reservationExpired =
       liveOrder.reservationStatus?.toLowerCase() === "expired" ||
       Boolean(
@@ -756,6 +770,9 @@ export default function OrderDetailPage({ params }: PageProps) {
       !PAYMENT_ACTION_BLOCKED_STATUSES.has(normPayment) &&
       paymentState !== "review_required" &&
       !reservationExpired &&
+      paymentCurrencyValid &&
+      paymentExponentValid &&
+      amountDueValid &&
       !isFullyCancelled;
     const canClickPayment = needsPayment && !paymentActionLocked;
 
@@ -763,14 +780,19 @@ export default function OrderDetailPage({ params }: PageProps) {
       if (!canClickPayment) return;
       const orderReference = liveOrder.orderNumber ? `order #${liveOrder.orderNumber}` : `order ${id}`;
       if (paymentFlow.payment && ["processing", "authorized", "unknown", "review_required"].includes(paymentFlow.payment.status)) {
-        await paymentFlow.resumePayment(id, paymentPrefill(), orderReference);
+        await paymentFlow.resumePayment(id, paymentPrefill(), orderReference, liveOrder.totals.currency);
         return;
       }
       if (paymentFlow.payment && ["requires_action", "created"].includes(paymentFlow.payment.status)) {
-        await paymentFlow.resumePayment(id, paymentPrefill(), orderReference);
+        await paymentFlow.resumePayment(id, paymentPrefill(), orderReference, liveOrder.totals.currency);
         return;
       }
-      await paymentFlow.startPayment({ orderId: id, prefill: paymentPrefill(), orderReference });
+      await paymentFlow.startPayment({
+        orderId: id,
+        orderCurrency: liveOrder.totals.currency,
+        prefill: paymentPrefill(),
+        orderReference,
+      });
     };
 
     return (
@@ -836,6 +858,16 @@ export default function OrderDetailPage({ params }: PageProps) {
             {paymentFlow.message.text}
           </p>
         )}
+        {selectedCurrencyCode && selectedCurrencyCode !== liveOrder.totals.currency && (
+          <div className="rounded-xl border border-outline-variant/20 bg-surface-container-high/50 p-3 text-xs font-semibold text-on-surface-variant">
+            This order will be paid in {liveOrder.totals.currency}, the currency selected when it was created.
+          </div>
+        )}
+        {(!paymentCurrencyValid || !paymentExponentValid || !amountDueValid) && (
+          <div className="rounded-xl border border-error/20 bg-error/5 p-3 text-xs font-semibold text-error">
+            Payment is unavailable because this order has incomplete currency information. Please contact support.
+          </div>
+        )}
 
         {reservationExpired && (
           <p role="status" className="text-xs font-semibold rounded-xl p-3 bg-warning-container/40 text-on-warning-container">
@@ -888,7 +920,7 @@ export default function OrderDetailPage({ params }: PageProps) {
               Refund: {RETURN_REFUND_LABELS[lastCancellation.refundStatus] || lastCancellation.refundStatus.replace(/_/g, " ")}
             </p>
             <p className="font-semibold text-on-surface">
-              {formatCurrencyMinor(lastCancellation.refundAmountMinor, orderCurrency)}
+              {formatOrderMoney(lastCancellation.refundAmountMinor)}
             </p>
           </div>
         )}
@@ -998,7 +1030,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="text-xs font-bold text-primary">
-                        {formatCurrencyMinor(returnRequest.refundAmountMinor, orderCurrency)}
+                        {formatOrderMoney(returnRequest.refundAmountMinor)}
                       </p>
                       <span className="material-symbols-outlined text-on-surface-variant text-lg">
                         {isExpanded ? "expand_less" : "expand_more"}
@@ -1209,11 +1241,11 @@ export default function OrderDetailPage({ params }: PageProps) {
                     </div>
                     <div className="text-left sm:text-right">
                       <span className="font-headline-sm text-headline-sm text-primary font-bold">
-                        {formatCurrencyMinor(pricing.finalUnitPriceMinor, liveOrder.totals.currency)}
+                        {formatOrderMoney(pricing.finalUnitPriceMinor)}
                       </span>
                       {discount > 0 && (
                         <p className="text-xs text-on-surface-variant line-through mt-0.5">
-                          {formatCurrencyMinor(pricing.originalUnitPriceMinor, liveOrder.totals.currency)}
+                          {formatOrderMoney(pricing.originalUnitPriceMinor)}
                         </p>
                       )}
                     </div>
@@ -1265,7 +1297,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-on-surface-variant">Subtotal:</span>
-                      <span className="font-bold text-primary text-base">{formatCurrencyMinor(pricing.subtotalMinor, liveOrder.totals.currency)}</span>
+                      <span className="font-bold text-primary text-base">{formatOrderMoney(pricing.subtotalMinor)}</span>
                     </div>
                   </div>
                 </div>
@@ -1395,6 +1427,9 @@ export default function OrderDetailPage({ params }: PageProps) {
   };
 
   const orderCurrency = liveOrder.totals.currency || "USD";
+  const orderExponent = liveOrder.totals.exponent;
+  const formatOrderMoney = (amountMinor: number) =>
+    formatCurrencyMinor(amountMinor, orderCurrency, orderExponent);
 
   return (
     <div className="bg-background text-on-surface font-body-md min-h-screen flex flex-col relative overflow-x-hidden selection:bg-secondary-container">
@@ -1513,14 +1548,14 @@ export default function OrderDetailPage({ params }: PageProps) {
                 <div className="flex justify-between">
                   <span className="text-on-surface-variant">Subtotal</span>
                   <span className="font-bold text-on-surface">
-                    {formatCurrencyMinor(liveOrder.totals.merchandiseSubtotalMinor, orderCurrency)}
+                    {formatOrderMoney(liveOrder.totals.merchandiseSubtotalMinor)}
                   </span>
                 </div>
                 {liveOrder.totals.itemDiscountMinor > 0 && (
                   <div className="flex justify-between text-error font-medium">
                     <span>Item Discount</span>
                     <span>
-                      -{formatCurrencyMinor(liveOrder.totals.itemDiscountMinor, orderCurrency)}
+                      -{formatOrderMoney(liveOrder.totals.itemDiscountMinor)}
                     </span>
                   </div>
                 )}
@@ -1528,7 +1563,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                   <div className="flex justify-between text-error font-medium">
                     <span>Order Discount</span>
                     <span>
-                      -{formatCurrencyMinor(liveOrder.totals.orderDiscountMinor, orderCurrency)}
+                      -{formatOrderMoney(liveOrder.totals.orderDiscountMinor)}
                     </span>
                   </div>
                 )}
@@ -1537,13 +1572,13 @@ export default function OrderDetailPage({ params }: PageProps) {
                   <span className="font-bold text-on-surface">
                     {liveOrder.totals.shippingMinor === 0
                       ? "Free"
-                      : formatCurrencyMinor(liveOrder.totals.shippingMinor, orderCurrency)}
+                      : formatOrderMoney(liveOrder.totals.shippingMinor)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-on-surface-variant">Tax</span>
                   <span className="font-bold text-on-surface">
-                    {formatCurrencyMinor(liveOrder.totals.taxMinor, orderCurrency)}
+                    {formatOrderMoney(liveOrder.totals.taxMinor)}
                   </span>
                 </div>
                 
@@ -1553,7 +1588,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                 <div className="flex justify-between font-playfair text-xl text-on-surface font-bold">
                   <span>Grand Total</span>
                   <span className="font-bold text-primary" style={{ color: THEME_COLORS.global.primary }}>
-                    {formatCurrencyMinor(liveOrder.totals.totalMinor, orderCurrency)}
+                    {formatOrderMoney(liveOrder.totals.totalMinor)}
                   </span>
                 </div>
                 
@@ -1561,13 +1596,13 @@ export default function OrderDetailPage({ params }: PageProps) {
                   <div className="flex justify-between">
                     <span className="text-on-surface-variant font-medium">Amount Paid</span>
                     <span className="font-bold text-on-surface">
-                      {formatCurrencyMinor(liveOrder.totals.paidMinor, orderCurrency)}
+                      {formatOrderMoney(liveOrder.totals.paidMinor)}
                     </span>
                   </div>
                   <div className="flex justify-between bg-primary/5 p-2.5 rounded-xl border border-primary/10 items-center">
                     <span className="text-primary font-bold text-xs uppercase tracking-wider">Amount Due</span>
                     <span className="font-extrabold text-primary text-sm">
-                      {formatCurrencyMinor(liveOrder.totals.amountDueMinor, orderCurrency)}
+                      {formatOrderMoney(liveOrder.totals.amountDueMinor)}
                     </span>
                   </div>
                 </div>

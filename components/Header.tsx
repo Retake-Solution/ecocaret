@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import CurrencySelector from "@/components/CurrencySelector";
 import { useAppSelector } from "@/lib/store";
@@ -22,6 +22,21 @@ import {
   type MegaMenuObject,
 } from "@/constants/header";
 
+const subscribeHydration = (onStoreChange: () => void) => {
+  const timeoutId = window.setTimeout(onStoreChange, 0);
+  return () => window.clearTimeout(timeoutId);
+};
+
+const getClientHydrationSnapshot = () => true;
+const getServerHydrationSnapshot = () => false;
+
+const useHasHydrated = () =>
+  useSyncExternalStore(
+    subscribeHydration,
+    getClientHydrationSnapshot,
+    getServerHydrationSnapshot
+  );
+
 interface HeaderProps {
   scrolled: boolean;
   setCartOpen: (open: boolean) => void;
@@ -35,9 +50,35 @@ export default function Header({
   setProfileOpen,
   cartItemsCount,
 }: HeaderProps) {
-  const user = useAppSelector((state) => state.profile.user);
+  const hasHydrated = useHasHydrated();
+  const storedUser = useAppSelector((state) => state.profile.user);
+  const user = hasHydrated ? storedUser : null;
+  const safeCartItemsCount = hasHydrated ? cartItemsCount : 0;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const avatar = getProfileAvatarDisplay(user);
+
+  const renderCurrencySlot = (compact = false, className = "") => {
+    if (!hasHydrated) {
+      return (
+        <div
+          className={`inline-flex h-11 items-center gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-low px-3 text-on-surface-variant shadow-sm ${className}`}
+          aria-hidden="true"
+        >
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-[12px] font-bold text-primary">
+            $
+          </span>
+          <span className="flex flex-col leading-none">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant/60">
+              Currency
+            </span>
+            <span className="text-[11px] font-bold tracking-wide">USD</span>
+          </span>
+        </div>
+      );
+    }
+
+    return <CurrencySelector compact={compact} className={className} label="Currency" />;
+  };
 
   const renderMobileMenu = () => {
     return (
@@ -72,7 +113,7 @@ export default function Header({
               <span className="text-[10px] font-bold tracking-widest text-on-surface-variant/40 uppercase">
                 Currency
               </span>
-              <CurrencySelector className="w-full" />
+              {renderCurrencySlot(false, "w-full")}
             </div>
 
             {/* Category Accordions */}
@@ -399,7 +440,7 @@ export default function Header({
       </div>
 
       <div className="flex items-center gap-4 md:gap-6" style={{ color: THEME_COLORS.global.primary }}>
-        <CurrencySelector compact className="hidden md:inline-flex" />
+        {renderCurrencySlot(true, "hidden md:inline-flex")}
         <button
           className="md:hidden hover:bg-primary/10 transition-all duration-300 p-2 rounded-full cursor-pointer flex items-center justify-center"
           onClick={() => setMobileMenuOpen(true)}
@@ -411,12 +452,12 @@ export default function Header({
           className="material-symbols-outlined hover:bg-primary/10 transition-all duration-300 p-2 rounded-full cursor-pointer relative hover:scale-105 active:scale-95 transition-transform"
         >
           shopping_bag
-          {cartItemsCount > 0 && (
+          {safeCartItemsCount > 0 && (
             <span
               style={{ backgroundColor: THEME_COLORS.global.secondary }}
               className="absolute top-1 right-1 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold font-sans"
             >
-              {cartItemsCount}
+              {safeCartItemsCount}
             </span>
           )}
         </button>

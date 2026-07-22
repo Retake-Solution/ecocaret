@@ -57,6 +57,12 @@ apiClient.interceptors.request.use((config) => {
     }
   }
 
+  const explicitCurrencyCode = normalizeCurrencyCode(config.headers["X-Currency-Code"]);
+  if (explicitCurrencyCode) {
+    config.headers["X-Currency-Code"] = explicitCurrencyCode;
+    return config;
+  }
+
   const currencyCode = normalizeCurrencyCode(getActiveCurrencyCode());
   if (currencyCode && shouldAttachCurrencyHeader(config.url)) {
     config.headers["X-Currency-Code"] = currencyCode;

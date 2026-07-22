@@ -183,6 +183,10 @@ export interface OrderData {
     refundedMinor?: number;
     amountDueMinor: number;
     currency: string;
+    exponent?: number;
+    baseCurrency?: "USD";
+    baseExponent?: 2;
+    baseTotalMinor?: number;
   };
   shippingAddressSnapshot?: AddressInput;
   billingAddressSnapshot?: AddressInput;
@@ -272,6 +276,7 @@ export interface CustomerPayment {
   status: CustomerPaymentStatus;
   amountMinor: number;
   currency: string;
+  exponent?: number;
   captureMethod: "automatic" | "manual";
   expiresAt?: string;
   createdAt?: string;

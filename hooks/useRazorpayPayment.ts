@@ -26,6 +26,7 @@ interface PaymentMessage {
 
 interface StartPaymentOptions {
   orderId: string;
+  orderCurrency?: string;
   orderReference?: string;
   prefill?: {
     name?: string;
@@ -213,9 +214,9 @@ export const useRazorpayPayment = ({
   );
 
   const refreshPaymentState = useCallback(
-    async (orderId: string, paymentId: string) => {
+    async (orderId: string, paymentId: string, orderCurrency?: string) => {
       try {
-        const result = await getOrderPayment(orderId, paymentId);
+        const result = await getOrderPayment(orderId, paymentId, undefined, orderCurrency);
         handlePaymentState(result.data);
         return result.data;
       } catch (error) {
@@ -227,7 +228,7 @@ export const useRazorpayPayment = ({
   );
 
   const pollPaymentStatus = useCallback(
-    (orderId: string, paymentId: string) => {
+    (orderId: string, paymentId: string, orderCurrency?: string) => {
       stopPolling();
       setPolling(true);
       setReconciling(true);
@@ -240,7 +241,7 @@ export const useRazorpayPayment = ({
           pollRequestInFlightRef.current = true;
           const controller = new AbortController();
           pollAbortControllerRef.current = controller;
-          const result = await getOrderPayment(orderId, paymentId, controller.signal);
+          const result = await getOrderPayment(orderId, paymentId, controller.signal, orderCurrency);
           pollAbortControllerRef.current = null;
           handlePaymentState(result.data);
 
@@ -294,19 +295,20 @@ export const useRazorpayPayment = ({
         const result = await abandonOrderPayment(
           paymentForCheckout.orderId,
           paymentForCheckout.id,
-          getPaymentAbandonIdempotencyKey(paymentForCheckout.id)
+          getPaymentAbandonIdempotencyKey(paymentForCheckout.id),
+          paymentForCheckout.currency
         );
         handlePaymentState(result.data);
 
         if (shouldPollPaymentStatus(result.data.status, result.httpStatus)) {
-          pollPaymentStatus(result.data.orderId, result.data.id);
+          pollPaymentStatus(result.data.orderId, result.data.id, result.data.currency);
         }
       } catch {
         setMessage({
           type: "warning",
           text: "We could not confirm the payment status yet. Please wait or check your order status.",
         });
-        pollPaymentStatus(paymentForCheckout.orderId, paymentForCheckout.id);
+        pollPaymentStatus(paymentForCheckout.orderId, paymentForCheckout.id, paymentForCheckout.currency);
       }
     },
     [handlePaymentState, pollPaymentStatus]
@@ -342,7 +344,7 @@ export const useRazorpayPayment = ({
       if (!action || action.type !== "razorpay_checkout") {
         handlePaymentState(paymentForCheckout);
         if (isPollablePayment(paymentForCheckout.status)) {
-          pollPaymentStatus(paymentForCheckout.orderId, paymentForCheckout.id);
+          pollPaymentStatus(paymentForCheckout.orderId, paymentForCheckout.id, paymentForCheckout.currency);
         }
         return paymentForCheckout;
       }
@@ -368,7 +370,11 @@ export const useRazorpayPayment = ({
         }
 
         if (checkoutResult.type === "failed") {
-          const refreshed = await refreshPaymentState(paymentForCheckout.orderId, paymentForCheckout.id);
+          const refreshed = await refreshPaymentState(
+            paymentForCheckout.orderId,
+            paymentForCheckout.id,
+            paymentForCheckout.currency
+          );
           if (!refreshed || refreshed.status === "created" || refreshed.status === "requires_action") {
             setMessage({
               type: "error",
@@ -388,17 +394,22 @@ export const useRazorpayPayment = ({
           const verified = await verifyRazorpayPayment(
             paymentForCheckout.orderId,
             paymentForCheckout.id,
-            checkoutResult.confirmation
+            checkoutResult.confirmation,
+            paymentForCheckout.currency
           );
           handlePaymentState(verified.data);
 
           if (shouldPollPaymentStatus(verified.data.status)) {
-            pollPaymentStatus(verified.data.orderId, verified.data.id);
+            pollPaymentStatus(verified.data.orderId, verified.data.id, verified.data.currency);
           }
 
           return verified.data;
         } catch (error) {
-          const refreshed = await refreshPaymentState(paymentForCheckout.orderId, paymentForCheckout.id);
+          const refreshed = await refreshPaymentState(
+            paymentForCheckout.orderId,
+            paymentForCheckout.id,
+            paymentForCheckout.currency
+          );
           refreshOrder();
 
           if (refreshed?.status === "paid") {
@@ -406,7 +417,7 @@ export const useRazorpayPayment = ({
           }
 
           if (refreshed && shouldPollPaymentStatus(refreshed.status)) {
-            pollPaymentStatus(refreshed.orderId, refreshed.id);
+            pollPaymentStatus(refreshed.orderId, refreshed.id, refreshed.currency);
             return refreshed;
           }
 
@@ -433,8 +444,8 @@ export const useRazorpayPayment = ({
     [handlePaymentDismiss, handlePaymentState, pollPaymentStatus, reconciling, refreshOrder, refreshPaymentState]
   );
 
-  const recoverActivePayment = useCallback(async (orderId: string) => {
-    const payments = (await listOrderPayments(orderId)).data;
+  const recoverActivePayment = useCallback(async (orderId: string, orderCurrency?: string) => {
+    const payments = (await listOrderPayments(orderId, orderCurrency)).data;
     const activePayment = newestPayment(payments.filter(isActiveRazorpayPayment));
     if (!activePayment) return null;
     writeStoredAttempt(orderId, readStoredAttempt(orderId).key || createUUID(), activePayment.id);
@@ -443,7 +454,7 @@ export const useRazorpayPayment = ({
   }, []);
 
   const startPayment = useCallback(
-    async ({ orderId, prefill, orderReference }: StartPaymentOptions) => {
+    async ({ orderId, orderCurrency, prefill, orderReference }: StartPaymentOptions) => {
       if (busy || activeCheckoutRef.current || polling || reconciling) return payment;
 
       setBusy(true);
@@ -456,12 +467,12 @@ export const useRazorpayPayment = ({
 
         let createdPayment: CustomerPayment;
         try {
-          const result = await createOrderPayment(orderId, stored.key);
+          const result = await createOrderPayment(orderId, stored.key, orderCurrency);
           createdPayment = result.data;
         } catch (error) {
           if (error instanceof ApiRequestError && error.status === 409 && error.code === "PAYMENT_ACTIVE_ATTEMPT_EXISTS") {
             setMessage({ type: "info", text: "Recovering your active payment attempt..." });
-            const recovered = await recoverActivePayment(orderId);
+            const recovered = await recoverActivePayment(orderId, orderCurrency);
             if (!recovered) throw error;
             createdPayment = recovered;
           } else {
@@ -488,7 +499,8 @@ export const useRazorpayPayment = ({
     async (
       orderId: string,
       prefill?: StartPaymentOptions["prefill"],
-      orderReference?: string
+      orderReference?: string,
+      orderCurrency?: string
     ) => {
       if (busy || activeCheckoutRef.current || polling || reconciling) return payment;
 
@@ -499,7 +511,7 @@ export const useRazorpayPayment = ({
 
         if (stored.paymentId) {
           try {
-            recovered = (await getOrderPayment(orderId, stored.paymentId)).data;
+            recovered = (await getOrderPayment(orderId, stored.paymentId, undefined, orderCurrency)).data;
           } catch (error) {
             if (error instanceof ApiRequestError && error.status === 404) {
               clearStoredAttempt(orderId);
@@ -510,7 +522,7 @@ export const useRazorpayPayment = ({
         }
 
         if (!recovered) {
-          recovered = await recoverActivePayment(orderId);
+          recovered = await recoverActivePayment(orderId, orderCurrency);
         }
 
         if (!recovered) {
@@ -525,7 +537,7 @@ export const useRazorpayPayment = ({
 
         handlePaymentState(recovered);
         if (isPollablePayment(recovered.status)) {
-          pollPaymentStatus(recovered.orderId, recovered.id);
+          pollPaymentStatus(recovered.orderId, recovered.id, recovered.currency);
         }
         return recovered;
       } catch (error) {
@@ -550,9 +562,9 @@ export const useRazorpayPayment = ({
     if (!payment) return null;
     setReconciling(true);
     setMessage({ type: "info", text: "Checking payment status..." });
-    const refreshed = await refreshPaymentState(payment.orderId, payment.id);
+    const refreshed = await refreshPaymentState(payment.orderId, payment.id, payment.currency);
     if (refreshed && shouldPollPaymentStatus(refreshed.status)) {
-      pollPaymentStatus(refreshed.orderId, refreshed.id);
+      pollPaymentStatus(refreshed.orderId, refreshed.id, refreshed.currency);
     }
     return refreshed;
   }, [payment, pollPaymentStatus, refreshPaymentState]);

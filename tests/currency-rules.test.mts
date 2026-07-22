@@ -8,6 +8,8 @@ const apiClientSource = readFileSync(new URL("../services/apiClient.ts", import.
 const apiSource = readFileSync(new URL("../services/api.ts", import.meta.url), "utf8");
 const headerSource = readFileSync(new URL("../components/Header.tsx", import.meta.url), "utf8");
 const checkoutSource = readFileSync(new URL("../app/checkout/page.tsx", import.meta.url), "utf8");
+const paymentHookSource = readFileSync(new URL("../hooks/useRazorpayPayment.ts", import.meta.url), "utf8");
+const orderDetailSource = readFileSync(new URL("../app/orders/[id]/page.tsx", import.meta.url), "utf8");
 
 test("customer currency storage persists only the selected ISO code", () => {
   assert.equal(CUSTOMER_CURRENCY_STORAGE_KEY, "customer.currencyCode");
@@ -49,6 +51,7 @@ test("public currency API is limited to customer-safe discovery endpoints", () =
 
 test("shared API client attaches selected currency only to customer API requests", () => {
   assert.match(apiClientSource, /"X-Currency-Code"/);
+  assert.match(apiClientSource, /explicitCurrencyCode/);
   assert.match(apiClientSource, /CURRENCY_DISCOVERY_PATTERN/);
   assert.match(apiClientSource, /x-currency-code/);
   assert.match(apiClientSource, /x-currency-rate-version/);
@@ -64,6 +67,24 @@ test("checkout displays backend-provided converted cart money and does not displ
   assert.match(checkoutSource, /priceMoney/);
   assert.match(checkoutSource, /formatMoney/);
   assert.match(checkoutSource, /Calculated by backend/);
+  assert.match(checkoutSource, /isCartPricingStale/);
   assert.doesNotMatch(checkoutSource, /subtotal \* 0\.08/);
   assert.doesNotMatch(checkoutSource, /currently available in USD only/);
+});
+
+test("payment creation and recovery use the order currency override", () => {
+  assert.match(apiSource, /currencyOverrideHeader/);
+  assert.match(apiSource, /createOrderPayment = async \([^]*currencyCode\?: string/);
+  assert.match(paymentHookSource, /orderCurrency\?: string/);
+  assert.match(paymentHookSource, /createOrderPayment\(orderId, stored\.key, orderCurrency\)/);
+  assert.match(paymentHookSource, /verifyRazorpayPayment\([^]*paymentForCheckout\.currency/);
+  assert.match(orderDetailSource, /orderCurrency: liveOrder\.totals\.currency/);
+  assert.match(orderDetailSource, /resumePayment\(id, paymentPrefill\(\), orderReference, liveOrder\.totals\.currency\)/);
+});
+
+test("order detail validates and formats stored currency exponent", () => {
+  assert.match(orderDetailSource, /isSafeCurrencyCode/);
+  assert.match(orderDetailSource, /isSafeCurrencyExponent/);
+  assert.match(orderDetailSource, /liveOrder\.totals\.exponent/);
+  assert.match(orderDetailSource, /formatOrderMoney/);
 });

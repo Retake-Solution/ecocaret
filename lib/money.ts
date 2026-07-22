@@ -16,7 +16,7 @@ export const formatMoney = (
   }
 ) => {
   if (!isSafeAmount(money.amountMinor)) return "Amount unavailable";
-  if (!Number.isInteger(money.exponent) || money.exponent < 0 || money.exponent > 3) {
+  if (!Number.isInteger(money.exponent) || money.exponent < 0 || money.exponent > 6) {
     return "Currency unavailable";
   }
 

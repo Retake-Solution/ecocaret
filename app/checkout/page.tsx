@@ -33,6 +33,8 @@ export default function CheckoutPage() {
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const user = useAppSelector((state) => state.profile.user);
   const token = useAppSelector((state) => state.profile.token);
+  const currencyInitialized = useAppSelector((state) => state.currency.initialized);
+  const selectedCurrencyCode = useAppSelector((state) => state.currency.selectedCode);
   const isLoggedIn = Boolean(
     user ||
     token ||
@@ -106,6 +108,11 @@ export default function CheckoutPage() {
     if (!savedToken) {
       alert("Please sign in to place your order.");
       dispatch(setProfileOpen(true));
+      return;
+    }
+
+    if (isCartPricingStale) {
+      alert("Cart prices need to be refreshed for the selected currency. Please remove and add the items again from the collection page.");
       return;
     }
 
@@ -220,6 +227,11 @@ export default function CheckoutPage() {
           exponent: moneyItems[0].priceMoney.exponent,
         })
       : formatLegacyUsdMajor(legacySubtotal);
+  const isCartPricingStale =
+    currencyInitialized &&
+    Boolean(selectedCurrencyCode) &&
+    cartItems.some((item) => item.priceMoney?.currency !== selectedCurrencyCode);
+  const submitDisabled = isSubmitting || isCartPricingStale;
 
   return (
     <div className="bg-background text-on-surface font-body-md min-h-screen flex flex-col relative overflow-x-hidden selection:bg-secondary-container">
@@ -570,8 +582,8 @@ export default function CheckoutPage() {
               <Button
                 unstyled
                 type="submit"
-                disabled={isSubmitting}
-                aria-disabled={isSubmitting}
+                disabled={submitDisabled}
+                aria-disabled={submitDisabled}
                 className="lg:hidden w-full bg-primary text-on-primary py-4 rounded-full font-label-md text-label-md hover:bg-primary/95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer font-bold tracking-wider shadow-md active:scale-99 disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ backgroundColor: THEME_COLORS.global.primary }}
               >
@@ -618,6 +630,11 @@ export default function CheckoutPage() {
 
                 {/* Calculation breakdown */}
                 <div className="space-y-3 border-t border-outline-variant/10 pt-4 text-sm">
+                  {isCartPricingStale && (
+                    <div className="rounded-xl border border-error/20 bg-error/5 p-3 text-xs font-semibold text-error">
+                      Cart prices are not refreshed for {selectedCurrencyCode}. Please remove and add these items again before placing an order.
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-on-surface-variant">Bag Subtotal</span>
                     <span className="font-bold text-on-surface">
@@ -626,11 +643,11 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-on-surface-variant">Taxes & Duties</span>
-                    <span className="font-bold text-on-surface">0%</span>
+                    <span className="font-bold text-on-surface">Calculated by backend</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-on-surface-variant">Secure Armored Shipping</span>
-                    <span className="font-bold text-on-surface">Free</span>
+                    <span className="font-bold text-on-surface">Calculated by backend</span>
                   </div>
                   <div className="flex justify-between border-t border-outline-variant/10 pt-4 font-label-md text-label-md text-on-surface">
                     <span>Estimated Bag Total</span>
@@ -645,8 +662,8 @@ export default function CheckoutPage() {
                 <Button
                   unstyled
                   type="submit"
-                  disabled={isSubmitting}
-                  aria-disabled={isSubmitting}
+                  disabled={submitDisabled}
+                  aria-disabled={submitDisabled}
                   onClick={(e) => {
                     e.preventDefault();
                     const formElement = document.querySelector("form");

@@ -224,6 +224,7 @@ export default function ProductDetailsClient({
   const currentPriceMoney =
     getProductPricingVariant(product, selectedPurity, selectedMetalColor, selectedSize)?.price ||
     product.pricing?.estimated;
+    console.log('currentPriceMoney------->',getProductPricingVariant(product, selectedPurity, selectedMetalColor, selectedSize))
   const currentPriceLabel = currentPriceMoney
     ? formatMoney(currentPriceMoney)
     : formatLegacyUsdMajor(currentPrice);
