@@ -17,6 +17,7 @@ This README documents the customer-facing frontend in this repository and the ba
 - [Validation and Error Handling](#validation-and-error-handling)
 - [Idempotency](#idempotency)
 - [Security and Compliance Rules](#security-and-compliance-rules)
+- [Customer Currency Phase A](#customer-currency-phase-a)
 - [Testing Checklist](#testing-checklist)
 - [Operations and Release Notes](#operations-and-release-notes)
 - [Detailed Checkout Guide](#detailed-checkout-guide)
@@ -687,9 +688,46 @@ Rules:
 | URLs | Do not submit arbitrary callback/return URLs for payment creation. |
 | Logs | Do not log signatures, provider payloads, tokens, or customer-sensitive details. |
 
+## Customer Currency Phase A
+
+The customer storefront supports public currency discovery and a customer-selected display currency code. The frontend does not expose admin rate management, does not perform client-side conversion, and treats backend money snapshots as authoritative.
+
+| Area | Rule |
+| --- | --- |
+| Public discovery | Fetch active currencies with `GET /api/v1/currencies` and single currency metadata with `GET /api/v1/currencies/:code`. |
+| Forbidden customer APIs | Do not fetch rates, rate history, providers, approvals, or admin currency configuration from the customer app. |
+| Persistence | Store only the selected ISO code in `localStorage` key `customer.currencyCode`. Do not persist rate version or conversion data. |
+| Request header | Shared `apiClient` attaches `X-Currency-Code` to customer API calls, excluding currency discovery and external URLs. |
+| Response headers | `X-Currency-Code` reconciles the selector when the backend resolves/falls back. `X-Currency-Rate-Version` is kept in memory only for debugging/reconciliation. |
+| Formatting | Use `formatMoney`/`formatServerMoney` with integer minor units and currency exponent. Never use a global `/100` formatter for all currencies. |
+| Orders/payments/refunds | Always format the stored transaction currency from backend order/payment/refund DTOs, not the currently selected selector value. |
+| Catalog/cart | Product APIs return selected-currency `pricing.estimated` and `pricing.variants[]`; the UI uses these money objects first and falls back to legacy USD only for older cached cart entries. |
+| Checkout | Checkout displays selected-currency cart money when available. Final order/payment amount and currency still come from backend order/payment creation. |
+
+Currency selection flow:
+
+```mermaid
+sequenceDiagram
+  participant UI as Header Selector
+  participant Store as Currency Store
+  participant API as apiClient
+  participant Backend as Backend API
+
+  UI->>Store: initialize on app mount
+  Store->>Backend: GET /api/v1/currencies
+  Backend-->>Store: active currencies + defaultCurrency
+  Store->>UI: selected metadata
+  UI->>Store: selectCurrency(code)
+  Store->>Backend: GET /api/v1/currencies/:code
+  Store->>API: persist selected code only
+  API->>Backend: customer request + X-Currency-Code
+  Backend-->>API: X-Currency-Code + optional X-Currency-Rate-Version
+  API->>Store: reconcile resolved code
+```
+
 ## Testing Checklist
 
-The repo includes a focused Node test for Razorpay payment status and abandon rules at `tests/razorpay-payment-rules.test.mts`. Keep expanding coverage as checkout and order behavior grows. Required coverage:
+The repo includes focused Node tests for Razorpay payment status and currency rules at `tests/razorpay-payment-rules.test.mts` and `tests/currency-rules.test.mts`. Keep expanding coverage as checkout and order behavior grows. Required coverage:
 
 | Area | Test |
 | --- | --- |
@@ -708,6 +746,11 @@ The repo includes a focused Node test for Razorpay payment status and abandon ru
 | Razorpay success race | Success callback prevents abandonment before backend verification starts. |
 | Payment polling | HTTP 202 and non-terminal statuses keep retry/cancellation disabled and poll status. |
 | Polling timeout | Keeps payment non-terminal and exposes manual status check. |
+| Currency discovery | Customer app only calls public currency metadata endpoints. |
+| Currency header | Customer API calls carry `X-Currency-Code`; discovery and external calls do not. |
+| Currency fallback | Backend `X-Currency-Code` response reconciles the selected code. |
+| Minor units | 0, 2, and 3 decimal currencies format from integer minor amounts. |
+| Checkout subtotal | Converted cart line totals are summed only when all lines share the same backend money currency/exponent. |
 | Cleanup | Timers and in-flight payment-status requests are cleaned up on unmount. |
 | Provider refunds | Frontend never calls Razorpay/Stripe refund APIs. |
 | States | Loading, empty, validation, conflict, rate-limit, server error. |

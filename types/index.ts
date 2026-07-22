@@ -11,10 +11,33 @@ export interface ApiCategory {
   updatedAt?: string;
 }
 
+export interface ProductMoney {
+  amountMinor: number;
+  currency: string;
+  exponent: number;
+}
+
+export interface ProductPriceVariant {
+  metalType: string;
+  metalColor: string;
+  purity: string;
+  size: string;
+  sizeLabel?: string;
+  metalWeightGrams?: number;
+  price: ProductMoney;
+  basePrice?: ProductMoney;
+}
+
 export interface ApiProduct {
   ratings?: {
     average: number;
     count: number;
+  };
+  pricing?: {
+    currency: string;
+    exponent: number;
+    estimated: ProductMoney;
+    variants: ProductPriceVariant[];
   };
   _id: string;
   sku: string;

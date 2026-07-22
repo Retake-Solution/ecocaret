@@ -25,10 +25,13 @@ import {
   CreatePaymentPayload,
   CustomerPaymentListResult,
   CustomerPaymentResult,
+  CurrencyListResponse,
+  CurrencyResponse,
   VerifyRazorpayPayload,
 } from "@/types";
 import { buildProfileUpdateBody, type ProfileEditValues } from "@/lib/profileEdit";
 import { buildRegistrationRequestBody } from "@/lib/registration";
+import { normalizeCurrencyCode } from "@/lib/currencyStorage";
 import type { ProfileUser } from "@/lib/features/profile/profileSlice";
 
 export interface ApiFieldError {
@@ -77,6 +80,41 @@ const toQueryParams = (filters?: ProductFilters) => {
   return Object.fromEntries(
     Object.entries(filters).filter(([, value]) => value !== "" && value !== undefined)
   );
+};
+
+const currencyOverrideHeader = (currencyCode?: string) => {
+  const normalized = normalizeCurrencyCode(currencyCode);
+  return normalized ? { "X-Currency-Code": normalized } : {};
+};
+
+export const listCurrencies = async (): Promise<CurrencyListResponse> => {
+  try {
+    const response = await apiClient.get<CurrencyListResponse>("/api/v1/currencies");
+    const json = response.data;
+
+    if (!json?.success || !Array.isArray(json.data)) {
+      throw new Error("Unable to load currencies.");
+    }
+
+    return json;
+  } catch (error) {
+    throw getApiError(error, "Unable to load currencies.");
+  }
+};
+
+export const getCurrency = async (code: string): Promise<CurrencyResponse["data"]> => {
+  try {
+    const response = await apiClient.get<CurrencyResponse>(`/api/v1/currencies/${code}`);
+    const json = response.data;
+
+    if (!json?.success || !json.data) {
+      throw new Error("Unable to load selected currency.");
+    }
+
+    return json.data;
+  } catch (error) {
+    throw getApiError(error, "Unable to load selected currency.");
+  }
 };
 
 export const login = async ({ email, password }: LoginCredentials): Promise<LoginResult> => {
@@ -345,7 +383,8 @@ export const getOrderInvoice = async (id: string) => {
 
 export const createOrderPayment = async (
   orderId: string,
-  idempotencyKey: string
+  idempotencyKey: string,
+  currencyCode?: string
 ): Promise<CustomerPaymentResult> => {
   try {
     const payload: CreatePaymentPayload = {
@@ -356,6 +395,7 @@ export const createOrderPayment = async (
     const response = await apiClient.post(`/api/v1/orders/${orderId}/payments`, payload, {
       headers: {
         "Idempotency-Key": idempotencyKey,
+        ...currencyOverrideHeader(currencyCode),
       },
     });
     const json = response.data;
@@ -370,9 +410,14 @@ export const createOrderPayment = async (
 
 export const createRazorpayPayment = createOrderPayment;
 
-export const listOrderPayments = async (orderId: string): Promise<CustomerPaymentListResult> => {
+export const listOrderPayments = async (
+  orderId: string,
+  currencyCode?: string
+): Promise<CustomerPaymentListResult> => {
   try {
-    const response = await apiClient.get(`/api/v1/orders/${orderId}/payments`);
+    const response = await apiClient.get(`/api/v1/orders/${orderId}/payments`, {
+      headers: currencyOverrideHeader(currencyCode),
+    });
     const json = response.data;
     if (!json?.success || !Array.isArray(json.data)) {
       throw new Error(json?.message || "Unable to load payment attempts.");
@@ -386,10 +431,14 @@ export const listOrderPayments = async (orderId: string): Promise<CustomerPaymen
 export const getOrderPayment = async (
   orderId: string,
   paymentId: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  currencyCode?: string
 ): Promise<CustomerPaymentResult> => {
   try {
-    const response = await apiClient.get(`/api/v1/orders/${orderId}/payments/${paymentId}`, { signal });
+    const response = await apiClient.get(`/api/v1/orders/${orderId}/payments/${paymentId}`, {
+      signal,
+      headers: currencyOverrideHeader(currencyCode),
+    });
     const json = response.data;
     if (!json?.success || !json?.data) {
       throw new Error(json?.message || "Unable to load payment status.");
@@ -422,7 +471,8 @@ export const updateCurrentUser = async (
 export const abandonOrderPayment = async (
   orderId: string,
   paymentId: string,
-  idempotencyKey: string
+  idempotencyKey: string,
+  currencyCode?: string
 ): Promise<CustomerPaymentResult & { httpStatus: number }> => {
   try {
     const response = await apiClient.post(
@@ -432,6 +482,7 @@ export const abandonOrderPayment = async (
         headers: {
           "Idempotency-Key": idempotencyKey,
           "Content-Type": "application/json",
+          ...currencyOverrideHeader(currencyCode),
         },
       }
     );
@@ -448,12 +499,16 @@ export const abandonOrderPayment = async (
 export const verifyRazorpayPayment = async (
   orderId: string,
   paymentId: string,
-  payload: VerifyRazorpayPayload
+  payload: VerifyRazorpayPayload,
+  currencyCode?: string
 ): Promise<CustomerPaymentResult> => {
   try {
     const response = await apiClient.post(
       `/api/v1/orders/${orderId}/payments/${paymentId}/verify-razorpay`,
-      payload
+      payload,
+      {
+        headers: currencyOverrideHeader(currencyCode),
+      }
     );
     const json = response.data;
     if (!json?.success || !json?.data) {

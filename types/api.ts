@@ -37,6 +37,35 @@ export interface LoginResult {
 export type { ProfileEditValues };
 export type Gender = ProfileGender;
 
+export type CurrencyCode = string;
+
+export interface PublicCurrency {
+  code: CurrencyCode;
+  name: string;
+  symbol: string;
+  narrowSymbol?: string;
+  exponent: number;
+  isDefault: boolean;
+  displayOrder: number;
+}
+
+export interface CurrencyListResponse {
+  success: boolean;
+  data: PublicCurrency[];
+  defaultCurrency: CurrencyCode;
+}
+
+export interface CurrencyResponse {
+  success: boolean;
+  data: PublicCurrency;
+}
+
+export interface Money {
+  amountMinor: number;
+  currency: CurrencyCode;
+  exponent: number;
+}
+
 export interface ProductFilters {
   category?: string;
   subCategory?: string;
@@ -154,6 +183,10 @@ export interface OrderData {
     refundedMinor?: number;
     amountDueMinor: number;
     currency: string;
+    exponent?: number;
+    baseCurrency?: "USD";
+    baseExponent?: 2;
+    baseTotalMinor?: number;
   };
   shippingAddressSnapshot?: AddressInput;
   billingAddressSnapshot?: AddressInput;
@@ -243,6 +276,7 @@ export interface CustomerPayment {
   status: CustomerPaymentStatus;
   amountMinor: number;
   currency: string;
+  exponent?: number;
   captureMethod: "automatic" | "manual";
   expiresAt?: string;
   createdAt?: string;

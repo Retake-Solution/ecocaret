@@ -1,11 +1,14 @@
 "use client";
 
 import React from "react";
+import { formatLegacyUsdMajor, formatMoney } from "@/lib/money";
+import type { Money } from "@/types";
 
 interface CartItem {
   id: string;
   name: string;
   price: number;
+  priceMoney?: Money;
   image: string;
   quantity: number;
 }
@@ -25,6 +28,28 @@ export default function CartDrawer({
   onRemoveItem,
   onCheckout,
 }: CartDrawerProps) {
+  const moneyItems = cartItems.filter((item) => item.priceMoney);
+  const canUseConvertedTotal =
+    moneyItems.length === cartItems.length &&
+    moneyItems.every(
+      (item) =>
+        item.priceMoney?.currency === moneyItems[0]?.priceMoney?.currency &&
+        item.priceMoney?.exponent === moneyItems[0]?.priceMoney?.exponent
+    );
+  const totalLabel =
+    canUseConvertedTotal && moneyItems[0]?.priceMoney
+      ? formatMoney({
+          amountMinor: moneyItems.reduce(
+            (sum, item) => sum + (item.priceMoney?.amountMinor || 0) * item.quantity,
+            0
+          ),
+          currency: moneyItems[0].priceMoney.currency,
+          exponent: moneyItems[0].priceMoney.exponent,
+        })
+      : formatLegacyUsdMajor(
+          cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+        );
+
   return (
     <div
       className={`fixed inset-0 z-[200] transition-opacity duration-300 ${
@@ -95,7 +120,7 @@ export default function CartDrawer({
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="font-label-md text-label-md text-secondary font-bold">
-                      ${item.price.toLocaleString()}
+                      {item.priceMoney ? formatMoney(item.priceMoney) : formatLegacyUsdMajor(item.price)}
                     </span>
                     <button
                       onClick={() => onRemoveItem(item.id)}
@@ -115,10 +140,7 @@ export default function CartDrawer({
             <div className="flex justify-between font-label-md text-label-md text-on-surface">
               <span>Total Value</span>
               <span className="font-bold text-secondary">
-                $
-                {cartItems
-                  .reduce((sum, item) => sum + item.price * item.quantity, 0)
-                  .toLocaleString()}
+                {totalLabel}
               </span>
             </div>
             <button

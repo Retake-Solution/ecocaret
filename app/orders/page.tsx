@@ -155,9 +155,6 @@ export default function OrderHistory() {
             <h1 className="font-headline-lg text-headline-lg mb-4" style={{ color: THEME_COLORS.global.primary }}>
               Order History
             </h1>
-            <p className="text-on-surface-variant font-body-lg max-w-2xl">
-              Reflect on your journey of sustainable luxury. Each piece marks a milestone in conscious craftsmanship.
-            </p>
           </div>
         </div>
 

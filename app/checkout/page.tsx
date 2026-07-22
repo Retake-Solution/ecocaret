@@ -10,6 +10,7 @@ import Button from "@/components/Button";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
 import { clearCart, setCartOpen } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
+import { formatLegacyUsdMajor, formatMoney } from "@/lib/money";
 import { THEME_COLORS } from "@/theme/colors";
 import { placeOrder } from "@/services/api";
 import {
@@ -32,6 +33,8 @@ export default function CheckoutPage() {
   const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const user = useAppSelector((state) => state.profile.user);
   const token = useAppSelector((state) => state.profile.token);
+  const currencyInitialized = useAppSelector((state) => state.currency.initialized);
+  const selectedCurrencyCode = useAppSelector((state) => state.currency.selectedCode);
   const isLoggedIn = Boolean(
     user ||
     token ||
@@ -105,6 +108,11 @@ export default function CheckoutPage() {
     if (!savedToken) {
       alert("Please sign in to place your order.");
       dispatch(setProfileOpen(true));
+      return;
+    }
+
+    if (isCartPricingStale) {
+      alert("Cart prices need to be refreshed for the selected currency. Please remove and add the items again from the collection page.");
       return;
     }
 
@@ -199,10 +207,31 @@ export default function CheckoutPage() {
     }
   };
 
-  const subtotal = cartItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
-  const tax = subtotal * 0.08; // 8% simulated tax
-  const shipping = subtotal > 5000 || subtotal === 0 ? 0 : 50;
-  const total = subtotal + tax + shipping;
+  const legacySubtotal = cartItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
+  const moneyItems = cartItems.filter((item) => item.priceMoney);
+  const canUseConvertedTotal =
+    moneyItems.length === cartItems.length &&
+    moneyItems.every(
+      (item) =>
+        item.priceMoney?.currency === moneyItems[0]?.priceMoney?.currency &&
+        item.priceMoney?.exponent === moneyItems[0]?.priceMoney?.exponent
+    );
+  const subtotalLabel =
+    canUseConvertedTotal && moneyItems[0]?.priceMoney
+      ? formatMoney({
+          amountMinor: moneyItems.reduce(
+            (sum, item) => sum + (item.priceMoney?.amountMinor || 0) * item.quantity,
+            0
+          ),
+          currency: moneyItems[0].priceMoney.currency,
+          exponent: moneyItems[0].priceMoney.exponent,
+        })
+      : formatLegacyUsdMajor(legacySubtotal);
+  const isCartPricingStale =
+    currencyInitialized &&
+    Boolean(selectedCurrencyCode) &&
+    cartItems.some((item) => item.priceMoney?.currency !== selectedCurrencyCode);
+  const submitDisabled = isSubmitting || isCartPricingStale;
 
   return (
     <div className="bg-background text-on-surface font-body-md min-h-screen flex flex-col relative overflow-x-hidden selection:bg-secondary-container">
@@ -553,8 +582,8 @@ export default function CheckoutPage() {
               <Button
                 unstyled
                 type="submit"
-                disabled={isSubmitting}
-                aria-disabled={isSubmitting}
+                disabled={submitDisabled}
+                aria-disabled={submitDisabled}
                 className="lg:hidden w-full bg-primary text-on-primary py-4 rounded-full font-label-md text-label-md hover:bg-primary/95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer font-bold tracking-wider shadow-md active:scale-99 disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ backgroundColor: THEME_COLORS.global.primary }}
               >
@@ -593,7 +622,7 @@ export default function CheckoutPage() {
                         </p>
                       </div>
                       <span className="font-label-sm text-label-sm text-secondary font-bold flex-shrink-0">
-                        ${item.price.toLocaleString()}
+                        {item.priceMoney ? formatMoney(item.priceMoney) : formatLegacyUsdMajor(item.price)}
                       </span>
                     </div>
                   ))}
@@ -601,32 +630,40 @@ export default function CheckoutPage() {
 
                 {/* Calculation breakdown */}
                 <div className="space-y-3 border-t border-outline-variant/10 pt-4 text-sm">
+                  {isCartPricingStale && (
+                    <div className="rounded-xl border border-error/20 bg-error/5 p-3 text-xs font-semibold text-error">
+                      Cart prices are not refreshed for {selectedCurrencyCode}. Please remove and add these items again before placing an order.
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-on-surface-variant">Bag Subtotal</span>
-                    <span className="font-bold text-on-surface">${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="font-bold text-on-surface">
+                      {subtotalLabel}
+                    </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-on-surface-variant">Sourcing & Customs Tax (8%)</span>
-                    <span className="font-bold text-on-surface">${tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="text-on-surface-variant">Taxes & Duties</span>
+                    <span className="font-bold text-on-surface">Calculated by backend</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-on-surface-variant">Secure Armored Shipping</span>
-                    <span className="font-bold text-on-surface">
-                      {shipping === 0 ? "Free" : `$${shipping.toLocaleString()}`}
-                    </span>
+                    <span className="font-bold text-on-surface">Calculated by backend</span>
                   </div>
                   <div className="flex justify-between border-t border-outline-variant/10 pt-4 font-label-md text-label-md text-on-surface">
-                    <span>Grand Total</span>
+                    <span>Estimated Bag Total</span>
                     <span className="font-bold text-primary" style={{ color: THEME_COLORS.global.primary }}>
-                      ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {subtotalLabel}
                     </span>
                   </div>
+                  <p className="text-[11px] leading-relaxed text-on-surface-variant">
+                    Final order totals, payment amount, and payment currency are created by the backend after inventory validation.
+                  </p>
                 </div>
                 <Button
                   unstyled
                   type="submit"
-                  disabled={isSubmitting}
-                  aria-disabled={isSubmitting}
+                  disabled={submitDisabled}
+                  aria-disabled={submitDisabled}
                   onClick={(e) => {
                     e.preventDefault();
                     const formElement = document.querySelector("form");

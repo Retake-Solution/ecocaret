@@ -6,6 +6,7 @@ import {
   PRODUCT_FALLBACK_SPEC,
   PRODUCT_TEXT_SEPARATOR,
 } from "@/constants/product";
+import { formatLegacyUsdMajor, formatMoney } from "@/lib/money";
 import { ApiCategory, ApiProduct } from "@/types";
 
 interface ProductCardProps {
@@ -90,6 +91,9 @@ export default function ProductCard({
   const productName = getProductName(product);
   const productImage = getProductImage(product);
   const price = getProductPrice(product);
+  const priceLabel = product.pricing?.estimated
+    ? formatMoney(product.pricing.estimated)
+    : formatLegacyUsdMajor(price);
   const spec = getProductSpec(product);
   const metalSummary = getMetalSummary(product);
   const availableSizeCount = getAvailableSizeCount(product);
@@ -135,7 +139,7 @@ export default function ProductCard({
             </p>
           </div>
           <p className="text-primary font-bold text-label-md md:text-body-lg">
-            ${price.toLocaleString()}
+            {priceLabel}
           </p>
 
           {/* Hover Details overlay */}
