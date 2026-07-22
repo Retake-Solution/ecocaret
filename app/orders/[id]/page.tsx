@@ -1432,7 +1432,7 @@ export default function OrderDetailPage({ params }: PageProps) {
     formatCurrencyMinor(amountMinor, orderCurrency, orderExponent);
 
   return (
-    <div className="bg-background text-on-surface font-body-md min-h-screen flex flex-col relative overflow-x-hidden selection:bg-secondary-container">
+    <div className="order-detail-simple bg-background text-on-surface font-sans min-h-screen flex flex-col relative overflow-x-hidden selection:bg-secondary-container">
       <style
         dangerouslySetInnerHTML={{
           __html: `
@@ -1450,7 +1450,14 @@ export default function OrderDetailPage({ params }: PageProps) {
           width: 100%;
         }
         .font-playfair {
-          font-family: var(--font-playfair-display), serif;
+          font-family: var(--font-plus-jakarta-sans), Arial, sans-serif;
+        }
+        .order-detail-simple :where(*:not(.material-symbols-outlined)) {
+          font-family: var(--font-plus-jakarta-sans), Arial, sans-serif !important;
+          letter-spacing: 0 !important;
+        }
+        .order-detail-simple :where(h1, h2, h3, h4, p, span, label, button, a, input, textarea) {
+          text-transform: none;
         }
       `,
         }}
