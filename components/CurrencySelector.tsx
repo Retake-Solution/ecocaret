@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import CurrencySelectionModal from "@/components/CurrencySelectionModal";
-import { selectCurrency } from "@/lib/features/currency/currencySlice";
-import { useAppDispatch, useAppSelector } from "@/lib/store";
+import Button from "@/components/Button";
+import { useAppSelector } from "@/lib/store";
 
 interface CurrencySelectorProps {
   compact?: boolean;
@@ -18,8 +16,6 @@ export default function CurrencySelector({
   label,
   onOpenModal,
 }: CurrencySelectorProps) {
-  const dispatch = useAppDispatch();
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const {
     currencies,
     selectedCode,
@@ -31,11 +27,6 @@ export default function CurrencySelector({
   const selectedCurrency =
     currencies.find((currency) => currency.code === selectedCode) || currencies[0];
   const widthClass = compact ? "min-w-[132px]" : "w-full";
-
-  const handleSelectCurrency = (code: string) => {
-    dispatch(selectCurrency(code));
-    setIsModalOpen(false);
-  };
 
   if (!initialized && loading) {
     return (
@@ -84,54 +75,38 @@ export default function CurrencySelector({
   }
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => {
-          if (onOpenModal) {
-            onOpenModal();
-            return;
-          }
-          setIsModalOpen(true);
-        }}
-        disabled={loading}
-        className={`group relative inline-flex h-11 items-center rounded-lg border border-outline-variant/35 bg-surface-container-lowest shadow-sm transition-all duration-200 hover:border-primary/45 hover:bg-primary/5 focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 disabled:cursor-wait disabled:opacity-60 ${widthClass} ${className}`}
-        title={
-          selectedCurrency
-            ? `${selectedCurrency.name} (${selectedCurrency.symbol})`
-            : "Select display currency"
-        }
-        aria-haspopup="dialog"
-        aria-expanded={isModalOpen}
+    <Button
+      unstyled
+      type="button"
+      onClick={onOpenModal}
+      disabled={loading || !onOpenModal}
+      className={`group relative inline-flex h-11 items-center rounded-lg border border-outline-variant/35 bg-surface-container-lowest shadow-sm transition-all duration-200 hover:border-primary/45 hover:bg-primary/5 focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15 disabled:cursor-wait disabled:opacity-60 ${widthClass} ${className}`}
+      title={
+        selectedCurrency
+          ? `${selectedCurrency.name} (${selectedCurrency.symbol})`
+          : "Select display currency"
+      }
+      aria-haspopup="dialog"
+    >
+      <span
+        className="ml-2.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[12px] font-bold text-primary transition-colors group-hover:bg-primary group-hover:text-on-primary"
+        aria-hidden="true"
       >
-        <span
-          className="ml-2.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[12px] font-bold text-primary transition-colors group-hover:bg-primary group-hover:text-on-primary"
-          aria-hidden="true"
-        >
-          {selectedCurrency?.symbol || "$"}
-        </span>
-        <span className="flex flex-col items-start leading-none">
-          {label && (
-            <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant/60">
-              {label}
-            </span>
-          )}
-          <span className="text-[11px] font-bold tracking-wide text-on-surface">
-            {selectedCurrency?.code || selectedCode || "USD"}
+        {selectedCurrency?.symbol || "$"}
+      </span>
+      <span className="flex flex-col items-start leading-none">
+        {label && (
+          <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant/60">
+            {label}
           </span>
+        )}
+        <span className="text-[11px] font-bold tracking-wide text-on-surface">
+          {selectedCurrency?.code || selectedCode || "USD"}
         </span>
-        <span className="material-symbols-outlined pointer-events-none absolute right-2.5 text-base text-on-surface-variant transition-colors group-hover:text-primary">
-          expand_more
-        </span>
-      </button>
-
-      <CurrencySelectionModal
-        currencies={currencies}
-        isOpen={!onOpenModal && isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSelect={handleSelectCurrency}
-        selectedCode={selectedCode}
-      />
-    </>
+      </span>
+      <span className="material-symbols-outlined pointer-events-none absolute right-2.5 text-base text-on-surface-variant transition-colors group-hover:text-primary">
+        expand_more
+      </span>
+    </Button>
   );
 }
