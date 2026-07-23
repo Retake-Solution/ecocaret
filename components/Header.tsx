@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useSyncExternalStore } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import CurrencySelector from "@/components/CurrencySelector";
 import { useAppSelector } from "@/lib/store";
@@ -110,9 +111,14 @@ export default function Header({
         >
           {/* Header */}
           <div className="flex justify-between items-center px-6 py-4 border-b border-outline-variant/20 h-20">
-            <span className="font-display-lg text-headline-sm font-semibold tracking-tighter text-primary">
-              Eco Caret
-            </span>
+            <Image
+              src="/icon.png"
+              alt="Eco Caret"
+              width={52}
+              height={52}
+              className="h-12 w-12 rounded-full object-contain"
+              priority
+            />
             <button
               onClick={() => setMobileMenuOpen(false)}
               className="material-symbols-outlined p-2 hover:bg-primary/10 rounded-full transition-colors cursor-pointer"
@@ -353,10 +359,19 @@ export default function Header({
       `}} />
       <Link
         href="/"
-        style={{ color: THEME_COLORS.global.primary }}
-        className="font-display-lg text-headline-md lg:text-display-lg tracking-tighter cursor-pointer font-bold"
+        className="flex items-center cursor-pointer"
+        aria-label="Eco Caret home"
       >
-        Eco Caret
+        <Image
+          src="/icon.png"
+          alt="Eco Caret"
+          width={56}
+          height={56}
+          className={`object-contain transition-all duration-300 ${
+            scrolled ? "h-11 w-11" : "h-14 w-14"
+          }`}
+          priority
+        />
       </Link>
       <div className="hidden lg:flex items-center gap-6 font-body-md text-body-md font-medium h-full">
         <div className="group h-full flex items-center">

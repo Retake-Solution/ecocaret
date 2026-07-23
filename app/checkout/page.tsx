@@ -643,11 +643,11 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-on-surface-variant">Taxes & Duties</span>
-                    <span className="font-bold text-on-surface">Calculated by backend</span>
+                    <span className="font-bold text-on-surface">0.00</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-on-surface-variant">Secure Armored Shipping</span>
-                    <span className="font-bold text-on-surface">Calculated by backend</span>
+                    <span className="font-bold text-on-surface">0.00</span>
                   </div>
                   <div className="flex justify-between border-t border-outline-variant/10 pt-4 font-label-md text-label-md text-on-surface">
                     <span>Estimated Bag Total</span>
