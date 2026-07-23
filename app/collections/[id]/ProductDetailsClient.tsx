@@ -2,18 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import Header from "@/components/Header";
 import ProductAccordion from "@/components/ProductAccordion";
 import ProductVisuals from "@/components/ProductVisuals";
 
-import CartDrawer from "@/components/CartDrawer";
-import ProfileDialog from "@/components/ProfileDialog";
 import { ApiCategory, ApiProduct } from "@/types";
 import { formatLegacyUsdMajor, formatMoney } from "@/lib/money";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
-import { setCartOpen, addToCart, removeFromCart } from "@/lib/features/cart/cartSlice";
-import { setProfileOpen } from "@/lib/features/profile/profileSlice";
+import { setCartOpen, addToCart } from "@/lib/features/cart/cartSlice";
 import { fetchProductById } from "@/services/api";
 
 interface ProductDetailsClientProps {
@@ -152,10 +147,6 @@ export default function ProductDetailsClient({
   suggestedProducts,
 }: ProductDetailsClientProps) {
   const dispatch = useAppDispatch();
-  const router = useRouter();
-  const cartOpen = useAppSelector((state) => state.cart.isOpen);
-  const profileOpen = useAppSelector((state) => state.profile.isOpen);
-  const cartItems = useAppSelector((state) => state.cart.items);
   const currencyInitialized = useAppSelector((state) => state.currency.initialized);
   const selectedCurrencyCode = useAppSelector((state) => state.currency.selectedCode);
 
@@ -167,7 +158,6 @@ export default function ProductDetailsClient({
   const primaryStone = getPrimaryStone(product);
   const initialImageUrls = getColorImageUrls(product, initialMetalColor);
 
-  const [scrolled, setScrolled] = useState(false);
   const [selectedImage, setSelectedImage] = useState(initialImageUrls[0] || "");
   const [selectedPurity, setSelectedPurity] = useState(initialPurity);
   const [selectedMetalColor, setSelectedMetalColor] = useState(initialMetalColor);
@@ -175,15 +165,6 @@ export default function ProductDetailsClient({
   const singleSizeValue =
     initialAvailableSizes.length === 1 ? initialAvailableSizes[0].size : "Select your size";
   const [selectedSize, setSelectedSize] = useState(singleSizeValue);
-
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   useEffect(() => {
     if (!currencyInitialized) return;
@@ -271,13 +252,6 @@ export default function ProductDetailsClient({
 
   return (
     <div className="bg-surface text-on-surface font-body-md selection:bg-secondary-fixed selection:text-on-secondary-fixed min-h-screen flex flex-col relative overflow-x-hidden">
-      <Header
-        scrolled={scrolled}
-        setCartOpen={(open) => dispatch(setCartOpen(open))}
-        setProfileOpen={(open) => dispatch(setProfileOpen(open))}
-        cartItemsCount={cartItems.reduce((acc, curr) => acc + curr.quantity, 0)}
-      />
-
       <main className="flex-grow pt-32 pb-24 max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop w-full">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
           <ProductVisuals
@@ -622,20 +596,6 @@ export default function ProductDetailsClient({
         )}
       </main>
 
-
-
-      <CartDrawer
-        isOpen={cartOpen}
-        onClose={() => dispatch(setCartOpen(false))}
-        cartItems={cartItems}
-        onRemoveItem={(id) => dispatch(removeFromCart(id))}
-        onCheckout={() => {
-          dispatch(setCartOpen(false));
-          router.push("/checkout");
-        }}
-      />
-
-      <ProfileDialog isOpen={profileOpen} onClose={() => dispatch(setProfileOpen(false))} />
     </div>
   );
 }

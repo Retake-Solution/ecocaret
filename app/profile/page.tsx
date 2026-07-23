@@ -1,16 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import CartDrawer from "@/components/CartDrawer";
-import ProfileDialog from "@/components/ProfileDialog";
+import React, { useState } from "react";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import Button from "@/components/Button";
 import ProfileEditModal from "@/components/ProfileEditModal";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
-import { setCartOpen, removeFromCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen, logoutUser } from "@/lib/features/profile/profileSlice";
 import { getProfileAvatarDisplay } from "@/lib/profileEdit";
 
@@ -23,28 +17,14 @@ const formatProfileLabel = (value?: string) =>
 
 export default function ProfilePage() {
   const dispatch = useAppDispatch();
-  const router = useRouter();
-  const cartOpen = useAppSelector((state) => state.cart.isOpen);
-  const profileOpen = useAppSelector((state) => state.profile.isOpen);
-  const cartItems = useAppSelector((state) => state.cart.items);
   const user = useAppSelector((state) => state.profile.user);
 
-  const [scrolled, setScrolled] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const profileName = user?.name || user?.email.split("@")[0] || "Eco Caret Member";
   const displayName = profileName;
   const profileEmail = user?.email || "";
   const avatar = getProfileAvatarDisplay(user);
-
-  // Scroll listener for Header
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const confirmLogout = () => {
     dispatch(logoutUser());
@@ -68,14 +48,6 @@ export default function ProfilePage() {
           font-family: var(--font-playfair-display), serif;
         }
       `}} />
-
-      {/* Header */}
-      <Header
-        scrolled={scrolled}
-        setCartOpen={(open) => dispatch(setCartOpen(open))}
-        setProfileOpen={(open) => dispatch(setProfileOpen(open))}
-        cartItemsCount={cartItems.reduce((acc, curr) => acc + curr.quantity, 0)}
-      />
 
       {/* Main Container */}
       <main className="flex-grow pt-[84px] lg:pt-[96px] pb-16 md:pb-24 bg-background">
@@ -250,9 +222,6 @@ export default function ProfilePage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <Footer />
-
       {/* Floating Action Button (Mobile Only) */}
       <div className="fixed bottom-6 right-6 lg:hidden z-50">
         <Button
@@ -264,18 +233,6 @@ export default function ProfilePage() {
         </Button>
       </div>
 
-      {/* Cart & Profile Toggles */}
-      <CartDrawer
-        isOpen={cartOpen}
-        onClose={() => dispatch(setCartOpen(false))}
-        cartItems={cartItems}
-        onRemoveItem={(id) => dispatch(removeFromCart(id))}
-        onCheckout={() => {
-          dispatch(setCartOpen(false));
-          router.push("/checkout");
-        }}
-      />
-      <ProfileDialog isOpen={profileOpen} onClose={() => dispatch(setProfileOpen(false))} />
       {user && (
         <ProfileEditModal
           isOpen={isEditProfileModalOpen}

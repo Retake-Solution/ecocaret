@@ -2,16 +2,10 @@
 
 import React, { useCallback, useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import CartDrawer from "@/components/CartDrawer";
-import ProfileDialog from "@/components/ProfileDialog";
 import OrderCard from "@/components/OrderCard";
 import Button from "@/components/Button";
 import PaginationControls from "@/components/PaginationControls";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
-import { setCartOpen, removeFromCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import { THEME_COLORS } from "@/theme/colors";
 import { getOrders } from "@/services/api";
@@ -19,14 +13,9 @@ import { OrderData, GetOrdersParams } from "@/types";
 
 export default function OrderHistory() {
   const dispatch = useAppDispatch();
-  const router = useRouter();
-  const cartOpen = useAppSelector((state) => state.cart.isOpen);
-  const profileOpen = useAppSelector((state) => state.profile.isOpen);
-  const cartItems = useAppSelector((state) => state.cart.items);
   const user = useAppSelector((state) => state.profile.user);
   const token = useAppSelector((state) => state.profile.token);
 
-  const [scrolled, setScrolled] = useState(false);
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [loading, setLoading] = useState(() => {
     if (typeof window !== "undefined") {
@@ -111,15 +100,6 @@ export default function OrderHistory() {
     }
   }, [fetchOrders, user, page, search, fulfillmentFilter]);
 
-  // Scroll listener for Header solid transition
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   return (
     <div className="bg-background text-on-surface font-body-md min-h-screen flex flex-col relative overflow-x-hidden selection:bg-secondary-container">
       {/* Custom Styles using theme/colors.ts variables */}
@@ -138,14 +118,6 @@ export default function OrderHistory() {
           font-family: var(--font-playfair-display), serif;
         }
       `}} />
-
-      {/* Header */}
-      <Header
-        scrolled={scrolled}
-        setCartOpen={(open) => dispatch(setCartOpen(open))}
-        setProfileOpen={(open) => dispatch(setProfileOpen(open))}
-        cartItemsCount={cartItems.reduce((acc, curr) => acc + curr.quantity, 0)}
-      />
 
       {/* Main Order History Content */}
       <main className="flex-grow max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-16 pt-28 w-full">
@@ -293,21 +265,6 @@ export default function OrderHistory() {
         )}
       </main>
 
-      {/* Footer */}
-      <Footer />
-
-      {/* CartDrawer & ProfileDialog triggers */}
-      <CartDrawer
-        isOpen={cartOpen}
-        onClose={() => dispatch(setCartOpen(false))}
-        cartItems={cartItems}
-        onRemoveItem={(id) => dispatch(removeFromCart(id))}
-        onCheckout={() => {
-          dispatch(setCartOpen(false));
-          router.push("/checkout");
-        }}
-      />
-      <ProfileDialog isOpen={profileOpen} onClose={() => dispatch(setProfileOpen(false))} />
     </div>
   );
 }

@@ -40,7 +40,7 @@ const useHasHydrated = () =>
 
 interface HeaderProps {
   scrolled: boolean;
-  setCartOpen: (open: boolean) => void;
+  setCartOpen: () => void;
   setProfileOpen: (open: boolean) => void;
   cartItemsCount: number;
   onCurrencySelectOpen?: () => void;
@@ -466,7 +466,7 @@ export default function Header({
           <span className="material-symbols-outlined">menu</span>
         </button>
         <button
-          onClick={() => setCartOpen(true)}
+          onClick={() => setCartOpen()}
           className="material-symbols-outlined hover:bg-primary/10 transition-all duration-300 p-2 rounded-full cursor-pointer relative hover:scale-105 active:scale-95 transition-transform"
         >
           shopping_bag

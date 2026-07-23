@@ -2,16 +2,9 @@
 
 import React, { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import CartDrawer from "@/components/CartDrawer";
-import ProfileDialog from "@/components/ProfileDialog";
 import OrderTimeline from "@/components/OrderTimeline";
 import Button from "@/components/Button";
-import { useAppDispatch, useAppSelector } from "@/lib/store";
-import { setCartOpen, removeFromCart } from "@/lib/features/cart/cartSlice";
-import { setProfileOpen } from "@/lib/features/profile/profileSlice";
+import { useAppSelector } from "@/lib/store";
 import { formatServerMoney } from "@/lib/money";
 import { THEME_COLORS } from "@/theme/colors";
 import axios from "axios";
@@ -154,14 +147,8 @@ const getSafeApiMessage = (error: unknown, fallback: string) => {
 
 export default function OrderDetailPage({ params }: PageProps) {
   const { id } = use(params);
-  const dispatch = useAppDispatch();
-  const router = useRouter();
-  const cartOpen = useAppSelector((state) => state.cart.isOpen);
-  const profileOpen = useAppSelector((state) => state.profile.isOpen);
-  const cartItems = useAppSelector((state) => state.cart.items);
   const selectedCurrencyCode = useAppSelector((state) => state.currency.selectedCode);
 
-  const [scrolled, setScrolled] = useState(false);
   const [liveOrder, setLiveOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -341,15 +328,6 @@ export default function OrderDetailPage({ params }: PageProps) {
     fetchReturnsData();
   }, [id, loadReturns, refreshOrder]);
 
-  // Scroll listener for Header solid transition
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   const loadMoreEvents = async () => {
     if (loadingMoreEvents || !eventsHasMore || nextAfterSequence === undefined) return;
     try {
@@ -504,12 +482,6 @@ export default function OrderDetailPage({ params }: PageProps) {
   if (loading) {
     return (
       <div className="bg-background text-on-surface font-body-md min-h-screen flex flex-col relative selection:bg-secondary-container">
-        <Header
-          scrolled={scrolled}
-          setCartOpen={(open) => dispatch(setCartOpen(open))}
-          setProfileOpen={(open) => dispatch(setProfileOpen(open))}
-          cartItemsCount={cartItems.reduce((acc, curr) => acc + curr.quantity, 0)}
-        />
         <main className="flex-grow max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-12 pt-28 w-full">
           <div className="flex flex-col items-center justify-center py-32 space-y-4">
             <div
@@ -521,7 +493,6 @@ export default function OrderDetailPage({ params }: PageProps) {
             </p>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -529,12 +500,6 @@ export default function OrderDetailPage({ params }: PageProps) {
   if (error || !liveOrder) {
     return (
       <div className="bg-background text-on-surface font-body-md min-h-screen flex flex-col relative selection:bg-secondary-container">
-        <Header
-          scrolled={scrolled}
-          setCartOpen={(open) => dispatch(setCartOpen(open))}
-          setProfileOpen={(open) => dispatch(setProfileOpen(open))}
-          cartItemsCount={cartItems.reduce((acc, curr) => acc + curr.quantity, 0)}
-        />
         <main className="flex-grow max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-12 pt-28 w-full">
           <div className="p-8 rounded-2xl bg-error-container/40 border border-error/20 text-center max-w-md mx-auto space-y-4">
             <span className="material-symbols-outlined text-error text-5xl">warning</span>
@@ -552,7 +517,6 @@ export default function OrderDetailPage({ params }: PageProps) {
             </div>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -1463,14 +1427,6 @@ export default function OrderDetailPage({ params }: PageProps) {
         }}
       />
 
-      {/* Header */}
-      <Header
-        scrolled={scrolled}
-        setCartOpen={(open) => dispatch(setCartOpen(open))}
-        setProfileOpen={(open) => dispatch(setProfileOpen(open))}
-        cartItemsCount={cartItems.reduce((acc, curr) => acc + curr.quantity, 0)}
-      />
-
       {/* Main Content Area */}
       <main className="flex-grow max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-12 pt-28 w-full animate-fade-in">
         {/* Order Header */}
@@ -1826,22 +1782,6 @@ export default function OrderDetailPage({ params }: PageProps) {
           </div>
         </div>
       )}
-
-      {/* Footer */}
-      <Footer />
-
-      {/* Cart & Profile Modals */}
-      <CartDrawer
-        isOpen={cartOpen}
-        onClose={() => dispatch(setCartOpen(false))}
-        cartItems={cartItems}
-        onRemoveItem={(id) => dispatch(removeFromCart(id))}
-        onCheckout={() => {
-          dispatch(setCartOpen(false));
-          router.push("/checkout");
-        }}
-      />
-      <ProfileDialog isOpen={profileOpen} onClose={() => dispatch(setProfileOpen(false))} />
 
       {/* Custom Toast Notification */}
       {toast && (

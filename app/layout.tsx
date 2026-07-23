@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Literata, Playfair_Display } from "next/font/google";
+import AppLayout from "@/context/AppLayout";
 import StoreProvider from "@/components/StoreProvider";
 import "./globals.css";
 
@@ -44,7 +45,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
-        <StoreProvider>{children}</StoreProvider>
+        <StoreProvider>
+          <AppLayout>{children}</AppLayout>
+        </StoreProvider>
       </body>
     </html>
   );

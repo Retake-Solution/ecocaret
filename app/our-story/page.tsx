@@ -1,17 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion/react";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import ProfileDialog from "@/components/ProfileDialog";
-import CartDrawer from "@/components/CartDrawer";
 import Button from "@/components/Button";
-import { useAppDispatch, useAppSelector } from "@/lib/store";
-import { setCartOpen, removeFromCart } from "@/lib/features/cart/cartSlice";
-import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import {
   OUR_STORY_CHAPTERS,
   OUR_STORY_COMMITMENTS,
@@ -55,25 +47,9 @@ const joinClasses = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(" ");
 
 export default function OurStoryPage() {
-  const dispatch = useAppDispatch();
-  const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
-  const cartOpen = useAppSelector((state) => state.cart.isOpen);
-  const profileOpen = useAppSelector((state) => state.profile.isOpen);
-  const cartItems = useAppSelector((state) => state.cart.items);
-  const [navScrolled, setNavScrolled] = useState(false);
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setNavScrolled(window.scrollY > 20);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const handleSubscribe = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -87,17 +63,9 @@ export default function OurStoryPage() {
   const revealInitial = shouldReduceMotion ? false : "hidden";
   const hoverLift = shouldReduceMotion ? undefined : { y: -6 };
   const hoverPress = shouldReduceMotion ? undefined : { scale: 0.98 };
-  const cartItemsCount = cartItems.reduce((acc, curr) => acc + curr.quantity, 0);
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-background text-on-background selection:bg-secondary-container selection:text-on-secondary-container">
-      <Header
-        scrolled={navScrolled}
-        setCartOpen={(open) => dispatch(setCartOpen(open))}
-        setProfileOpen={(open) => dispatch(setProfileOpen(open))}
-        cartItemsCount={cartItemsCount}
-      />
-
       <main className="flex-grow">
         <section className="relative isolate overflow-hidden bg-surface px-margin-mobile pt-28 pb-12 md:px-margin-desktop md:pt-36 md:pb-20">
           <div className="absolute inset-0 -z-10">
@@ -456,21 +424,6 @@ export default function OurStoryPage() {
           </motion.div>
         </section>
       </main>
-
-      <Footer />
-
-      <CartDrawer
-        isOpen={cartOpen}
-        onClose={() => dispatch(setCartOpen(false))}
-        cartItems={cartItems}
-        onRemoveItem={(id) => dispatch(removeFromCart(id))}
-        onCheckout={() => {
-          dispatch(setCartOpen(false));
-          router.push("/checkout");
-        }}
-      />
-
-      <ProfileDialog isOpen={profileOpen} onClose={() => dispatch(setProfileOpen(false))} />
     </div>
   );
 }

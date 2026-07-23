@@ -1,14 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import ProfileDialog from "@/components/ProfileDialog";
 import Button from "@/components/Button";
 import { useAppDispatch, useAppSelector } from "@/lib/store";
-import { clearCart, setCartOpen } from "@/lib/features/cart/cartSlice";
+import { clearCart } from "@/lib/features/cart/cartSlice";
 import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import { formatLegacyUsdMajor, formatMoney } from "@/lib/money";
 import { THEME_COLORS } from "@/theme/colors";
@@ -30,7 +27,6 @@ export default function CheckoutPage() {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const cartItems = useAppSelector((state) => state.cart.items);
-  const profileOpen = useAppSelector((state) => state.profile.isOpen);
   const user = useAppSelector((state) => state.profile.user);
   const token = useAppSelector((state) => state.profile.token);
   const currencyInitialized = useAppSelector((state) => state.currency.initialized);
@@ -41,7 +37,6 @@ export default function CheckoutPage() {
     (typeof window !== "undefined" && localStorage.getItem("eco_caret_token"))
   );
 
-  const [scrolled, setScrolled] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitPhase, setSubmitPhase] = useState("");
   const [selectedAddressIndex, setSelectedAddressIndex] = useState<number | null>(null);
@@ -60,14 +55,6 @@ export default function CheckoutPage() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -247,14 +234,6 @@ export default function CheckoutPage() {
           box-shadow: 0 10px 30px -10px rgba(60, 153, 132, 0.12);
         }
       `}} />
-
-      {/* Header */}
-      <Header
-        scrolled={scrolled}
-        setCartOpen={(open) => dispatch(setCartOpen(open))}
-        setProfileOpen={(open) => dispatch(setProfileOpen(open))}
-        cartItemsCount={cartItems.reduce((acc, curr) => acc + curr.quantity, 0)}
-      />
 
       <main className="flex-grow max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-16 pt-28 w-full">
         {!isLoggedIn ? (
@@ -692,11 +671,6 @@ export default function CheckoutPage() {
         )}
       </main>
 
-      {/* Footer */}
-      <Footer />
-
-      {/* Profile Dialog */}
-      <ProfileDialog isOpen={profileOpen} onClose={() => dispatch(setProfileOpen(false))} />
     </div>
   );
 }

@@ -3,7 +3,6 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { fetchProductById, fetchProducts } from "@/services/api";
 import ProductDetailsClient from "./ProductDetailsClient";
-import Footer from "@/components/Footer";
 import {
   PRODUCT_DETAIL_METADATA_FALLBACK_TITLE,
   PRODUCT_DETAIL_METADATA_TITLE_SUFFIX,
@@ -46,13 +45,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
     .slice(0, PRODUCT_DETAIL_SUGGESTED_LIMIT);
 
   return (
-    <>
-      <ProductDetailsClient
-        key={product._id}
-        product={product}
-        suggestedProducts={suggestedProducts}
-      />
-      <Footer />
-    </>
+    <ProductDetailsClient
+      key={product._id}
+      product={product}
+      suggestedProducts={suggestedProducts}
+    />
   );
 }

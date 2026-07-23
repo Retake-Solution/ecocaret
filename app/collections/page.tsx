@@ -1,16 +1,10 @@
 "use client";
 
 import React, { Suspense, useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import CartDrawer from "@/components/CartDrawer";
-import ProfileDialog from "@/components/ProfileDialog";
+import { useSearchParams } from "next/navigation";
 import ProductCard from "@/components/ProductCard";
 import PaginationControls from "@/components/PaginationControls";
-import { useAppDispatch, useAppSelector } from "@/lib/store";
-import { setCartOpen, removeFromCart } from "@/lib/features/cart/cartSlice";
-import { setProfileOpen } from "@/lib/features/profile/profileSlice";
+import { useAppSelector } from "@/lib/store";
 import { fetchProductList } from "@/services/api";
 import { COLLECTION_FILTER_OPTIONS, DEFAULT_PRODUCT_FILTERS } from "@/constants/collections";
 import { ApiProduct, ProductFilters } from "@/types";
@@ -66,34 +60,14 @@ function CollectionsList({
   initialCategory: string;
   initialSubCategory: string;
 }) {
-  const dispatch = useAppDispatch();
-  const router = useRouter();
-  const cartOpen = useAppSelector((state) => state.cart.isOpen);
-  const profileOpen = useAppSelector((state) => state.profile.isOpen);
-  const cartItems = useAppSelector((state) => state.cart.items);
   const currencyInitialized = useAppSelector((state) => state.currency.initialized);
   const selectedCurrencyCode = useAppSelector((state) => state.currency.selectedCode);
-
-  const [navScrolled, setNavScrolled] = useState(false);
 
   const [filters, setFilters] = useState<ProductFilters>(() => ({
     ...DEFAULT_PRODUCT_FILTERS,
     category: initialCategory,
     subCategory: initialSubCategory,
   }));
-  // Navigation glassmorphism on scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 20) {
-        setNavScrolled(true);
-      } else {
-        setNavScrolled(false);
-      }
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -132,15 +106,7 @@ function CollectionsList({
   const hasNextPage = currentPage < totalPages;
 
   return (
-    <div className="collections-theme min-h-screen flex flex-col relative overflow-x-hidden selection:bg-secondary-container selection:text-on-secondary-container">
-      {/* TopNavBar */}
-      <Header
-        scrolled={navScrolled}
-        setCartOpen={(open) => dispatch(setCartOpen(open))}
-        setProfileOpen={(open) => dispatch(setProfileOpen(open))}
-        cartItemsCount={cartItems.reduce((acc, curr) => acc + curr.quantity, 0)}
-      />
-
+    <div className="collections-theme flex flex-col relative selection:bg-secondary-container selection:text-on-secondary-container">
       {/* Main Layout Area */}
       <main className="flex-grow flex flex-col min-h-screen pt-32 pb-24 px-margin-mobile md:px-margin-desktop gap-margin-desktop relative">
         {/* Main Content Area */}
@@ -218,22 +184,6 @@ function CollectionsList({
           </div>
         </section>
       </main>
-
-      <Footer />
-      {/* --- PREMIUM INTERACTIVE DRAWER: SHOPPING CART --- */}
-      <CartDrawer
-        isOpen={cartOpen}
-        onClose={() => dispatch(setCartOpen(false))}
-        cartItems={cartItems}
-        onRemoveItem={(id) => dispatch(removeFromCart(id))}
-        onCheckout={() => {
-          dispatch(setCartOpen(false));
-          router.push("/checkout");
-        }}
-      />
-
-      {/* --- PREMIUM INTERACTIVE DIALOG: USER PROFILE --- */}
-      <ProfileDialog isOpen={profileOpen} onClose={() => dispatch(setProfileOpen(false))} />
     </div>
   );
 }

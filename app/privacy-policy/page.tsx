@@ -1,14 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import CartDrawer from "@/components/CartDrawer";
-import ProfileDialog from "@/components/ProfileDialog";
-import { removeFromCart, setCartOpen } from "@/lib/features/cart/cartSlice";
-import { setProfileOpen } from "@/lib/features/profile/profileSlice";
-import { useAppDispatch, useAppSelector } from "@/lib/store";
-import { useRouter } from "next/navigation";
+import React from "react";
 
 const sections = [
   {
@@ -88,29 +80,8 @@ const sections = [
 ];
 
 export default function PrivacyPolicyPage() {
-  const dispatch = useAppDispatch();
-  const router = useRouter();
-  const cartOpen = useAppSelector((state) => state.cart.isOpen);
-  const profileOpen = useAppSelector((state) => state.profile.isOpen);
-  const cartItems = useAppSelector((state) => state.cart.items);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    handleScroll();
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   return (
     <div className="bg-background text-on-background font-body-md selection:bg-secondary-container selection:text-on-secondary-container min-h-screen flex flex-col relative overflow-x-hidden">
-      <Header
-        scrolled={scrolled}
-        setCartOpen={(open) => dispatch(setCartOpen(open))}
-        setProfileOpen={(open) => dispatch(setProfileOpen(open))}
-        cartItemsCount={cartItems.reduce((acc, curr) => acc + curr.quantity, 0)}
-      />
-
       <main className="flex-grow pt-28 md:pt-36">
         <section className="px-margin-mobile md:px-margin-desktop pb-16">
           <div className="max-w-4xl mx-auto">
@@ -146,19 +117,6 @@ export default function PrivacyPolicyPage() {
           </div>
         </section>
       </main>
-
-      <Footer />
-      <CartDrawer
-        isOpen={cartOpen}
-        onClose={() => dispatch(setCartOpen(false))}
-        cartItems={cartItems}
-        onRemoveItem={(id) => dispatch(removeFromCart(id))}
-        onCheckout={() => {
-          dispatch(setCartOpen(false));
-          router.push("/checkout");
-        }}
-      />
-      <ProfileDialog isOpen={profileOpen} onClose={() => dispatch(setProfileOpen(false))} />
     </div>
   );
 }

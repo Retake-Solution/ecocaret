@@ -1,20 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion/react";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import ProfileDialog from "@/components/ProfileDialog";
-import CartDrawer from "@/components/CartDrawer";
-import CurrencySelectionModal from "@/components/CurrencySelectionModal";
 import Hero from "@/components/Hero";
 import Button from "@/components/Button";
-import { useAppDispatch, useAppSelector } from "@/lib/store";
-import { setCartOpen, removeFromCart } from "@/lib/features/cart/cartSlice";
-import { selectCurrency } from "@/lib/features/currency/currencySlice";
-import { setProfileOpen } from "@/lib/features/profile/profileSlice";
 import {
   HOME_COLLECTIONS,
   HOME_PROCESS_STEPS,
@@ -53,29 +43,9 @@ const cardReveal = {
 } satisfies Variants;
 
 export default function Home() {
-  const dispatch = useAppDispatch();
-  const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
-  const cartOpen = useAppSelector((state) => state.cart.isOpen);
-  const profileOpen = useAppSelector((state) => state.profile.isOpen);
-  const cartItems = useAppSelector((state) => state.cart.items);
-  const currencies = useAppSelector((state) => state.currency.currencies);
-  const selectedCurrencyCode = useAppSelector((state) => state.currency.selectedCode);
-
-  const [scrolled, setScrolled] = useState(false);
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
-  const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const handleSubscribe = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -88,26 +58,12 @@ export default function Home() {
     }, 5000);
   };
 
-  const handleCurrencySelect = (code: string) => {
-    dispatch(selectCurrency(code));
-    setCurrencyModalOpen(false);
-  };
-
   const revealInitial = shouldReduceMotion ? false : "hidden";
   const hoverLift = shouldReduceMotion ? undefined : { y: -6 };
   const hoverPress = shouldReduceMotion ? undefined : { scale: 0.98 };
-  const cartItemsCount = cartItems.reduce((acc, curr) => acc + curr.quantity, 0);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background text-on-background selection:bg-secondary-container selection:text-on-secondary-container">
-      <Header
-        scrolled={scrolled}
-        setCartOpen={(open) => dispatch(setCartOpen(open))}
-        setProfileOpen={(open) => dispatch(setProfileOpen(open))}
-        cartItemsCount={cartItemsCount}
-        onCurrencySelectOpen={() => setCurrencyModalOpen(true)}
-      />
-
+    <>
       <main>
         <motion.div
           initial={shouldReduceMotion ? false : { opacity: 0 }}
@@ -325,29 +281,6 @@ export default function Home() {
         </motion.section>
       </main>
 
-      <Footer />
-
-      <CartDrawer
-        isOpen={cartOpen}
-        onClose={() => dispatch(setCartOpen(false))}
-        cartItems={cartItems}
-        onRemoveItem={(id) => dispatch(removeFromCart(id))}
-        onCheckout={() => {
-          dispatch(setCartOpen(false));
-          router.push("/checkout");
-        }}
-      />
-
-      <ProfileDialog isOpen={profileOpen} onClose={() => dispatch(setProfileOpen(false))} />
-
-      <CurrencySelectionModal
-        currencies={currencies}
-        isOpen={currencyModalOpen}
-        onClose={() => setCurrencyModalOpen(false)}
-        onSelect={handleCurrencySelect}
-        selectedCode={selectedCurrencyCode}
-        showCurrentSelection
-      />
-    </div>
+    </>
   );
 }
